@@ -1,419 +1,206 @@
-# ScholarSync
-
-ScholarSync is a **multi-agent AI academic assistant** that helps students manage assignments, study materials, scheduling, and interview preparation through cooperating AI agents.
-
-The system uses **LangGraph-based orchestration**, where multiple specialized agents collaborate to solve tasks such as:
-
-- answering questions from academic documents
-- managing assignments
-- scheduling calendar events
-- sending emails
-- performing web searches
-- conducting AI-based technical interviews
-
-ScholarSync demonstrates how **tool-augmented AI agents can automate academic workflows.**
+<div align="center">
+  <img src="logo.png" alt="ScholarSync Logo" width="150"/>
+  <h1>🎓 ScholarSync</h1>
+  <p><strong>An Intelligent, Multi-Agent Academic & Career Assistant</strong></p>
+  <p>Seamlessly bridging academic management, expert human assistance, and AI-driven technical interview preparation.</p>
+</div>
 
 ---
 
-# System Architecture
+## 🚀 Live Deployment
 
-ScholarSync follows a **multi-agent architecture** where agents cooperate through a LangGraph orchestration layer.
+Here is the link to our website:
 
-```
-User
- ↓
-Web Interface
- ↓
-LangGraph Agent Graph
- ↓
------------------------------------
-Planner Agent
-Retrieval Agent
-Tool Agent
-Interview Agent
------------------------------------
- ↓
-MCP Tool Server
- ↓
-External Services
-• Google Calendar
-• Email
-• Web Search
-• Document Retrieval
-```
+- **ScholarSync** `[https://scholarsync-pso.azurewebsites.net/]`
 
-Each agent performs a specialized role while collaborating with other agents to complete complex workflows.
 
 ---
 
-# Key Features
+## 📖 Project Overview
 
-### Multi-Agent AI System
-ScholarSync uses multiple agents instead of a single chatbot.  
-Agents collaborate to execute tasks and interact with external tools.
+**ScholarSync** is an advanced, multi-agent AI framework designed specifically for students and academics. It acts as a centralized "second brain," automating mundane tasks and supercharging learning through cooperating AI agents. 
 
-### Document Question Answering
-Users can upload academic documents and ask contextual questions.
-
-### Assignment Intelligence
-Assignments can be fetched, analyzed, and explained using AI.
-
-### Calendar Automation
-The system can create, update, delete, and list events using the Google Calendar API.
-
-### Email Automation
-Agents can generate and send emails automatically.
-
-### Web Search Tool
-Real-time web search capability integrated as a tool for the agent.
-
-### AI Interviewer
-Includes an **AI technical interview module** that simulates coding and conceptual interviews.
+Rather than a simple chatbot, ScholarSync is powered by a **LangGraph orchestration layer** where specialized agents collaborate to analyze academic materials, solve assignments proactively, schedule calendar events, fetch emails, and provide rigorous AI-driven coding interviews. To top it off, it features a real-time, peer-to-peer MERN chat platform enabling students to connect with verified human domain experts instantly.
 
 ---
 
-# AI Interviewer Module
+## 🧩 Core Architecture & Modules
 
-The project includes an **AI Interviewer system** that helps students practice technical interviews.
+The platform is divided into three major autonomous subsystems:
 
-Capabilities:
+### 1. 🧠 Multi-Agent Conversational Hub (LangGraph Core)
+- **Role:** The brain of ScholarSync. Analyzes complex user intents and routes them to specialized agents (Planner, Retriever, Tool Explorer, Executer).
+- **Features:** 
+  - Automated assignment solving with detailed PDF generation.
+  - Document Question & Answering (RAG) directly from uploaded academic materials.
+  - MCP Tool Server integration for real-world interactions (Google Calendar API, Email dispatch, Web search).
+  - Background syncing workers that monitor student portals for new deadlines.
+- **Tech Stack:** Python, FastAPI, LangGraph, LangChain, Groq API (LLaMA-3).
 
-- Ask technical questions
-- Conduct behavioral interviews
-- Analyze student responses
-- Provide feedback
-- Simulate interview environments
+### 2. 💬 Real-Time Expert Support Chat (MERN Stack)
+- **Role:** Bridges the gap between AI limitations and human expertise by letting students connect instantly to subject matter experts.
+- **Features:**
+  - Real-time text chat via **Socket.IO**.
+  - Peer-to-peer **WebRTC** Video Calling (no third-party software needed).
+  - Subject-based intelligent routing (e.g., automatically matching a "Graph algorithms" query to the designated Graph expert).
+  - JWT Authentication for Experts and file-sharing capabilities.
+- **Tech Stack:** React 18, Node.js, Express, MongoDB.
 
-Example interaction:
-
-```
-AI Interviewer: What is the difference between BFS and DFS?
-
-Student: BFS explores nodes level by level using a queue.
-
-AI Feedback:
-Correct. BFS uses a queue while DFS typically uses a stack or recursion.
-```
-
-Future improvements:
-
-- coding problem evaluation
-- real-time code execution
-- interview scoring system
-- adaptive difficulty interviews
+### 3. 👨‍💻 AI Interviewer & Coding IDE
+- **Role:** Prepares students for technical interviews using a state-of-the-art AI proctor and coding execution environment.
+- **Features:**
+  - Fully functional web-based code compilation for Python and C++.
+  - **Azure Cognitive Services** integration for real-time Text-to-Speech (TTS) and Speech-to-Text (STT), simulating a real human interviewer.
+  - Granular grading breakdown: Correctness, Communication, Problem Solving, and Efficiency.
+  - Parses Candidate CVs on the fly to tailor interview difficulty.
+- **Tech Stack:** FastAPI, LangChain, Azure Speech Services, Subprocess Code Execution, React Frontend.
 
 ---
 
-# MCP Tool Server
+## 🛠 Tech Stack
 
-The MCP server provides **external tools for agents**.
+| Domain | Technologies |
+|---|---|
+| **AI Integration** | LangGraph, LangChain, Groq/OpenAI, RAG, Azure Cognitive Services (Speech) |
+| **Backend** | Python 3.12, Node.js, Express.js, FastAPI |
+| **Frontend** | Vanilla JS/HTML/CSS (Main Hub), React.js (Chat & IDE) |
+| **Databases** | MongoDB (Chat Auth & Logs), JSON local DB (Syncing state) |
+| **Realtime** | Socket.IO, WebRTC |
+| **Tools** | MCP Tool Server, Google Calendar API |
 
-Available tools:
+---
 
-```
-calculator
-check_calendar_free
-create_calendar_event
-current_time
-delete_event_by_title
-get_subject_professors
-list_calendar_events
-send_email
-update_event_by_title
-web_search
-```
+## 📁 Repository Structure
 
-Example API request:
-
-```
-POST /tools/create_calendar_event
-```
-
-Input example:
-
-```
-{
-"title": "Submit DSA Assignment",
-"start_time": "2026-03-10T19:00:00",
-"end_time": "2026-03-10T20:00:00"
-}
+```text
+scholarsync/
+├── chatbot/                 # LangGraph Multi-Agent logic
+│   ├── graph.py             # Agent routing and state graph
+│   ├── mcp_server/          # Model Context Protocol tools (Calendar, Web Search, Mail)
+│   └── sync/                # Background deadline sync workers
+├── ScholarSync_Chat-main/   # MERN Stack Expert Chat Application
+│   ├── backend/             # Node.js Express server + Socket.IO + WebRTC signaling
+│   └── frontend/            # React App for Chat and Video UI
+├── code-ide-main 2/         # AI Coding Interviewer Environment
+│   ├── backend/             # FastAPI IDE compiler, Resume Parser, Azure TTS/STT
+│   └── client/              # React Interface for coding tests
+├── nstyle.css & styles.css  # Core styling for the main HTML dashboards
+├── server.py                # Main backend server for the Conversational Hub
+├── assignment_solver.py     # PDF generation and specific assignment query logic
+├── Dockerfile               # Production multi-service Docker configuration
+└── ...
 ```
 
 ---
 
-# Sync System
+## 🚀 Installation & Local Development
 
-The sync system periodically fetches academic data and keeps the system updated.
+Because ScholarSync is a microservice architecture, you will need to start the different services on different ports.
 
-Functions:
+### Prerequisites
+- **Python 3.10+**
+- **Node.js v18+**
+- **MongoDB** running locally or via Atlas.
+- API Keys: Groq API Key, OpenAI API Key (optional fallback), Azure Speech Services Key, Google Cloud Credentials (`service-account.json` or OAuth tokens).
 
-- fetch assignment data
-- maintain a local database
-- schedule periodic updates
-- synchronize academic information
+### 1. Setup Main Conversational Hub & Agents
 
-Files:
-
-```
-sync/
-fetch_api_data.py
-scheduler.py
-sync_worker.py
-sync_db.json
-```
-
----
-
-# Tech Stack
-
-### AI Framework
-- LangGraph
-- LangChain
-- Groq API (LLaMA models)
-
-### Backend
-- Python
-- FastAPI
-- MCP Tool Server
-
-### AI Processing
-- Retrieval Augmented Generation (RAG)
-- Vector embeddings
-- Document parsing
-
-### Integrations
-- Google Calendar API
-- Email tools
-- Web search APIs
-
-### Frontend
-- HTML
-- CSS
-- JavaScript
-
-### AI Interviewer
-- Python backend
-- React frontend
-- Docker support
-
----
-
-# Project Structure
-
-```
-LANGGRAPH
-│
-├── chatbot
-│   ├── graph.py
-│   ├── llm.py
-│   ├── memory.py
-│   ├── service.py
-│   ├── state.py
-│   ├── threads.py
-│   └── tools.py
-│
-├── mcp_server
-│   ├── mcp_server.py
-│   ├── calendar_auth.py
-│   ├── config.py
-│   │
-│   └── tools
-│       ├── calculator.py
-│       ├── check_calendar_free.py
-│       ├── create_calendar_event.py
-│       ├── current_time.py
-│       ├── delete_event_by_title.py
-│       ├── get_subject_professors.py
-│       ├── list_calendar_events.py
-│       ├── send_email.py
-│       ├── update_event_by_title.py
-│       └── web_search.py
-│
-├── sync
-│   ├── fetch_api_data.py
-│   ├── scheduler.py
-│   ├── sync_worker.py
-│   └── sync_db.json
-│
-├── ai_interviewer
-│   ├── backend
-│   │   ├── app
-│   │   ├── main.py
-│   │   ├── cv_parser.py
-│   │   ├── requirements.txt
-│   │   └── Dockerfile
-│   │
-│   └── client
-│       ├── public
-│       ├── src
-│       ├── package.json
-│       └── Dockerfile
-│
-├── js
-│   ├── chat.js
-│   ├── main.js
-│   ├── ui.js
-│   ├── history.js
-│   └── sidebar.js
-│
-├── data
-├── generated_pdfs
-│
-├── index.html
-├── scholar_sync.html
-├── assignment_solver.html
-├── analysis.html
-│
-├── chatbot.py
-├── server.py
-├── setup_db.py
-│
-├── styles.css
-├── nstyle.css
-│
-├── requirements.txt
-└── README.md
-```
-
----
-
-# Installation
-
-### Clone Repository
-
-```
-git clone https://github.com/yourusername/scholarsync.git
+```bash
+# 1. Clone & Enter Directory
+git clone https://github.com/your-username/scholarsync.git
 cd scholarsync
-```
 
----
+# 2. Create Python Virtual Environment
+python -m venv venv
+source venv/bin/activate  # Or `venv\Scripts\activate` on Windows
 
-### Create Virtual Environment
-
-```
-python -m venv myenv
-```
-
-Activate environment
-
-Windows
-
-```
-myenv\Scripts\activate
-```
-
-Mac/Linux
-
-```
-source myenv/bin/activate
-```
-
----
-
-### Install Dependencies
-
-```
+# 3. Install Requirements
 pip install -r requirements.txt
-```
 
----
+# 4. Set Environment Variables
+# Create a .env file in the root
+echo "GROQ_API_KEY=your_key_here" >> .env
+# (Ensure your tool API keys/credentials like calendar_auth.json are configured)
 
-### Configure Environment Variables
+# 5. Run the MCP Tool Server in one terminal
+python chatbot/mcp_server/mcp_server.py
 
-Create a `.env` file
-
-```
-GROQ_API_KEY=your_groq_api_key
-```
-
----
-
-# Running the System
-
-### Start MCP Tool Server
-
-```
-python mcp_server/mcp_server.py
-```
-
-### Start Backend Server
-
-```
+# 6. Run the Main Backend in another terminal
 python server.py
+# The main server runs on http://localhost:8000
 ```
 
-### Open Frontend
+### 2. Setup Real-Time Expert Chat
 
-Open in browser:
+```bash
+cd ScholarSync_Chat-main
 
-```
-index.html
-```
+# 1. Install Backend Dependencies
+cd backend
+npm install
+cp .env.example .env # Configure your MONGO_URI and JWT_SECRET here
 
----
+# 2. Seed Expert Accounts (Default password: expert@123)
+node scripts/seedExperts.js
 
-# Running AI Interviewer
+# 3. Start Backend server
+npm run dev
+# Chat API runs on http://localhost:5000
 
-Navigate to the AI interviewer folder:
-
-```
-cd ai_interviewer/backend
-pip install -r requirements.txt
-python main.py
-```
-
-For frontend:
-
-```
-cd ai_interviewer/client
+# 4. Install & Start Frontend
+cd ../frontend
 npm install
 npm start
+# Chat Frontend runs on http://localhost:3000
 ```
 
----
+### 3. Setup AI Interviewer IDE
 
-# Current Status
+```bash
+cd "code-ide-main 2"
 
-Fully Functional
+# 1. Install Backend Dependencies
+cd backend
+pip install -r requirements.txt
+cp .env.example .env # Add your AZURE_SPEECH_KEY and OPENAI_API_KEY here
 
-- multi-agent orchestration
-- document Q&A
-- assignment solver
-- calendar automation
-- email automation
-- web search integration
+# 2. Start IDE Backend
+uvicorn main:app --reload --port 8080
 
-Partially Implemented
+# 3. Start IDE Client
+cd ../client
+npm install
+npm start
+# IDE Client runs on its designated React port (usually http://localhost:3001)
+```
 
-- AI coding interview environment
-- automated interview scoring
-
-Known Limitations
-
-- no authentication system
-- centralized MCP tool execution
-- interview scoring still experimental
+*(Note: In production environments, rely on the provided `Dockerfile` via Docker Compose to unify port mapping and ease deployments).*
 
 ---
 
-# Future Improvements
+## 🌟 Usage Flows
 
-- authentication and user accounts
-- distributed agent architecture
-- AI coding interview IDE
-- advanced agent memory
-- interview analytics dashboard
-
----
-
-# License
-
-MIT License
+1. **Student Querying:** Open `index.html` (served via `server.py`). The student can ask questions. The LangGraph backend classifies the intent: "Is this simple retrieval, or a complex multi-step plan needed?"
+2. **Proactive Solving:** If the request is `Solve assignment X`, the `assignment_solver.py` kicks in, fetches material context via RAG, and generates a formatted PDF.
+3. **Getting Stuck?**: If the student needs human help on "Graphs", the MCP server queries the Chat Service `GET /api/connect?subject=graph` and seamlessly drops the user into a WebRTC video chat room with the Graph Expert.
+4. **Interview Practice:** The `proctoring` system evaluates code compiled in a subprocess. Azure STT listens to the user's microphone, and the LLM responds verbally via TTS, assessing correctness, efficiency, and communication skills.
 
 ---
 
-# Author
+## 🤝 Contributing
 
-Team:It’sWinTime
+We welcome contributions! Please open an issue first to discuss what you would like to change. 
 
-AI Systems • Multi-Agent Architectures • Full-Stack Development
+1. Fork the repo.
+2. Create your feature branch (`git checkout -b feature/AmazingFeature`).
+3. Commit your changes (`git commit -m 'Add some AmazingFeature'`).
+4. Push to the branch (`git push origin feature/AmazingFeature`).
+5. Open a Pull Request.
+
+---
+
+## 🛡 License
+
+Distributed under the MIT License. See `LICENSE` for more information.
+
+<p align="center">Built with ❤️ by Team It'sWinTime - Aditya Kumar Singh, Adarsh Kumar Singh, Aditya Jain, Aditya Pratap Singh.</p>

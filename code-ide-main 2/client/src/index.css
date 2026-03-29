@@ -1,0 +1,185 @@
+/* ── ScholarSync Design System Globals ──────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Navy backgrounds */
+  --ss-bg:       #020810;
+  --ss-panel:    #050d1c;
+  --ss-panel2:   #08152a;
+  --ss-panel3:   #0c1d3a;
+  --ss-panel4:   #102448;
+
+  /* Primary accents */
+  --ss-azure:    #1060f0;
+  --ss-azure2:   #3d7fff;
+  --ss-azure3:   #6aa0ff;
+  --ss-cyan:     #00cfff;
+  --ss-mint:     #00e5a0;
+
+  /* Text */
+  --ss-text:     #edf4ff;
+  --ss-muted:    #8aaed4;
+  --ss-dim:      #426080;
+
+  /* Borders */
+  --ss-border:   rgba(16,96,240,.14);
+  --ss-border2:  rgba(0,207,255,.18);
+
+  /* Glows */
+  --ss-glow:     rgba(16,96,240,.2);
+  --ss-glow2:    rgba(0,207,255,.15);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-size: 16px;
+  font-family: 'SF Pro Display', 'SF Pro Text', 'Segoe UI', system-ui, 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: var(--ss-bg);
+  color: var(--ss-text);
+}
+
+code, pre, textarea.code-area {
+  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+}
+
+/* ── Scrollbar Styling ───────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--ss-panel);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--ss-azure);
+  border-radius: 3px;
+  opacity: 0.6;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ss-cyan);
+}
+
+/* ── Micro-Animations ────────────────────────────────────────────────── */
+@keyframes ss-breathing-glow {
+  0%, 100% { box-shadow: 0 0 8px var(--ss-glow); }
+  50%       { box-shadow: 0 0 22px var(--ss-glow), 0 0 40px rgba(0,207,255,.1); }
+}
+
+@keyframes ss-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.6; }
+}
+
+@keyframes ss-shimmer {
+  0%   { background-position: -400px 0; }
+  100% { background-position: 400px 0; }
+}
+
+@keyframes ss-fade-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── AI Orb Animations ───────────────────────────────────────────────── */
+@keyframes ss-orb-breathe {
+  0%, 100% {
+    box-shadow:
+      0 0 30px rgba(16,96,240,.5),
+      0 0 60px rgba(16,96,240,.25),
+      0 0 100px rgba(0,207,255,.12),
+      inset 0 0 20px rgba(0,207,255,.15);
+  }
+  50% {
+    box-shadow:
+      0 0 50px rgba(16,96,240,.7),
+      0 0 90px rgba(16,96,240,.35),
+      0 0 140px rgba(0,207,255,.2),
+      inset 0 0 30px rgba(0,207,255,.25);
+  }
+}
+
+@keyframes ss-orbit-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+@keyframes ss-orbit-fast {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(-360deg); }
+}
+
+@keyframes ss-node-orbit {
+  from { transform: rotate(0deg) translateX(52px) rotate(0deg); }
+  to   { transform: rotate(360deg) translateX(52px) rotate(-360deg); }
+}
+
+@keyframes ss-node-orbit-2 {
+  from { transform: rotate(120deg) translateX(72px) rotate(-120deg); }
+  to   { transform: rotate(480deg) translateX(72px) rotate(-480deg); }
+}
+
+@keyframes ss-node-orbit-3 {
+  from { transform: rotate(240deg) translateX(60px) rotate(-240deg); }
+  to   { transform: rotate(600deg) translateX(60px) rotate(-600deg); }
+}
+
+@keyframes ss-scan-line {
+  0%   { top: -4px; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { top: 100%; opacity: 0; }
+}
+
+@keyframes ss-agent-dot-pulse {
+  0%, 100% { box-shadow: 0 0 4px currentColor; transform: scale(1); }
+  50%       { box-shadow: 0 0 10px currentColor, 0 0 20px currentColor; transform: scale(1.2); }
+}
+
+@keyframes ss-slide-up {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes ss-shake {
+  0%, 100% { transform: translateX(0); }
+  25%      { transform: translateX(-6px); }
+  50%      { transform: translateX(6px); }
+  75%      { transform: translateX(-3px); }
+}
+
+@keyframes ss-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.7; transform: scale(1.02); }
+}
+
+
+/* ── IDE Helper Classes ──────────────────────────────────────────────── */
+.ss-glow-border {
+  border: 1px solid var(--ss-border2) !important;
+  box-shadow: 0 0 10px var(--ss-glow2);
+}
+
+.ss-btn-hover:hover {
+  box-shadow: 0 0 12px var(--ss-glow), 0 0 24px rgba(16,96,240,.15) !important;
+  transform: translateY(-1px);
+  transition: all 0.2s ease;
+}
+
+.ss-panel-glow {
+  animation: ss-breathing-glow 3.5s ease-in-out infinite;
+}
+
+.ss-thinking-pulse {
+  animation: ss-pulse 1.4s ease-in-out infinite;
+}
+
+.ss-fade-in {
+  animation: ss-fade-in 0.25s ease;
+}
+

@@ -1,0 +1,16 @@
+{
+  "name": "scholarsync-chat",
+  "version": "1.0.0",
+  "description": "ScholarSync Chat + Video Platform (MERN Stack)",
+  "private": true,
+  "scripts": {
+    "install:all": "cd backend && npm install && cd ../frontend && npm install",
+    "dev": "concurrently \"cd backend && npm run dev\" \"cd frontend && npm start\"",
+    "seed": "cd backend && node scripts/seedExperts.js",
+    "start:backend": "cd backend && npm start",
+    "start:frontend": "cd frontend && npm start"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

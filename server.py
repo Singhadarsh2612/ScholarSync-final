@@ -23,8 +23,10 @@ from fastapi.responses import FileResponse
 # Resets every time the server restarts — no database needed.
 # ---------------------------
 
-_AUTH_EMAIL    = "scholarsync26@gmail.com"
-_AUTH_PASSWORD = "scholarsync26"
+import os
+
+_AUTH_EMAIL    = os.getenv("ADMIN_EMAIL", "scholarsync26@gmail.com")
+_AUTH_PASSWORD = os.getenv("ADMIN_PASSWORD", "scholarsync26")
 _session_authenticated = False   # single shared flag
 
 
