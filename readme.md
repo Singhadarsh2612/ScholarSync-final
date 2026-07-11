@@ -7,18 +7,17 @@
 
 ---
 
-## 🚀 Live Deployment
+## 🚀 Demo & Deployment
 
-Here is the link to our website:
+Watch the YouTube demo:
 
-- **ScholarSync** `[https://scholarsync-pso.azurewebsites.net/]`
-
+- [ScholarSync Demo](https://www.youtube.com/watch?v=kXB_OnIIRGQ)
 
 ---
 
 ## 📖 Project Overview
 
-**ScholarSync** is an advanced, multi-agent AI framework designed specifically for students and academics. It acts as a centralized "second brain," automating mundane tasks and supercharging learning through cooperating AI agents. 
+**ScholarSync** is an advanced, multi-agent AI framework designed specifically for students and academics. It acts as a centralized "second brain," automating mundane tasks and supercharging learning through cooperating AI agents.
 
 Rather than a simple chatbot, ScholarSync is powered by a **LangGraph orchestration layer** where specialized agents collaborate to analyze academic materials, solve assignments proactively, schedule calendar events, fetch emails, and provide rigorous AI-driven coding interviews. To top it off, it features a real-time, peer-to-peer MERN chat platform enabling students to connect with verified human domain experts instantly.
 
@@ -29,8 +28,9 @@ Rather than a simple chatbot, ScholarSync is powered by a **LangGraph orchestrat
 The platform is divided into three major autonomous subsystems:
 
 ### 1. 🧠 Multi-Agent Conversational Hub (LangGraph Core)
+
 - **Role:** The brain of ScholarSync. Analyzes complex user intents and routes them to specialized agents (Planner, Retriever, Tool Explorer, Executer).
-- **Features:** 
+- **Features:**
   - Automated assignment solving with detailed PDF generation.
   - Document Question & Answering (RAG) directly from uploaded academic materials.
   - MCP Tool Server integration for real-world interactions (Google Calendar API, Email dispatch, Web search).
@@ -38,6 +38,7 @@ The platform is divided into three major autonomous subsystems:
 - **Tech Stack:** Python, FastAPI, LangGraph, LangChain, Groq API (LLaMA-3).
 
 ### 2. 💬 Real-Time Expert Support Chat (MERN Stack)
+
 - **Role:** Bridges the gap between AI limitations and human expertise by letting students connect instantly to subject matter experts.
 - **Features:**
   - Real-time text chat via **Socket.IO**.
@@ -47,6 +48,7 @@ The platform is divided into three major autonomous subsystems:
 - **Tech Stack:** React 18, Node.js, Express, MongoDB.
 
 ### 3. 👨‍💻 AI Interviewer & Coding IDE
+
 - **Role:** Prepares students for technical interviews using a state-of-the-art AI proctor and coding execution environment.
 - **Features:**
   - Fully functional web-based code compilation for Python and C++.
@@ -98,6 +100,7 @@ scholarsync/
 Because ScholarSync is a microservice architecture, you will need to start the different services on different ports.
 
 ### Prerequisites
+
 - **Python 3.10+**
 - **Node.js v18+**
 - **MongoDB** running locally or via Atlas.
@@ -187,11 +190,10 @@ npm start
 
 ---
 
-
 ---
 
 ## 🛡 License
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
-<p align="center">Built with ❤️ by Team It'sWinTime - Aditya Kumar Singh, Adarsh Kumar Singh, Aditya Jain, Aditya Pratap Singh.</p>
+<p align="center">Built with ❤️ by Team It'sWinTime - Aditya Pratap Singh, Aditya Kumar Singh, Adarsh Kumar Singh, Aditya Jain.</p>
