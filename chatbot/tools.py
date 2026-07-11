@@ -6,7 +6,6 @@ import os
 
 client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
 
-# ---------------- Calculator Tool ----------------
 @tool
 def calculator(expression: str) -> str:
     """Evaluate mathematical expressions safely"""
@@ -19,7 +18,6 @@ def calculator(expression: str) -> str:
         return f"Calculation error: {str(e)}"
 
 
-# ---------------- Current Time Tool ----------------
 @tool
 def current_time() -> str:
     """Returns current system time"""
@@ -31,7 +29,6 @@ def current_time() -> str:
         return f"Time error: {str(e)}"
 
 
-# ---------------- Web Search Tool (Stable Version) ----------------
 
 @tool
 def web_search(query: str) -> str:

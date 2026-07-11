@@ -7,12 +7,10 @@ ASSIGNMENTS_API = "https://student-portal-3-tos6.onrender.com/api/student/69ac61
 MATERIALS_API = "https://student-portal-3-tos6.onrender.com/materials"
 
 
-# Create folders
 os.makedirs("data/assignments", exist_ok=True)
 os.makedirs("data/materials", exist_ok=True)
 
 
-# ---------------- FETCH ASSIGNMENTS ----------------
 
 def fetch_assignments():
 
@@ -29,7 +27,6 @@ def fetch_assignments():
     return res["data"]["assignments"]["upcoming"]
 
 
-# ---------------- FETCH MATERIALS ----------------
 
 def fetch_materials():
 
@@ -46,7 +43,6 @@ def fetch_materials():
     return res["data"]
 
 
-# ---------------- EXTRACT PDF FROM CLOUDINARY COLLECTION ----------------
 
 def extract_pdf_from_collection(collection_url):
 
@@ -76,7 +72,6 @@ def extract_pdf_from_collection(collection_url):
     return None
 
 
-# ---------------- DOWNLOAD FILE ----------------
 
 def download_pdf(url, save_path):
 
@@ -109,7 +104,6 @@ def download_pdf(url, save_path):
         return None
 
 
-# ---------------- DOWNLOAD ASSIGNMENTS ----------------
 
 def download_assignments():
 
@@ -135,7 +129,6 @@ def download_assignments():
     return paths
 
 
-# ---------------- DOWNLOAD MATERIALS ----------------
 
 def download_materials():
 
@@ -161,7 +154,6 @@ def download_materials():
     return paths
 
 
-# ---------------- MAIN ----------------
 
 if __name__ == "__main__":
 

@@ -8,7 +8,6 @@ import ProctorMonitor from "../components/proctoring/ProctorMonitor";
 
 const Interview = () => {
   const { problemId } = useParams();
-  // Use localhost for local dev, fallback to deployed URL only if env var is set
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session") || "default";
@@ -17,16 +16,13 @@ const Interview = () => {
 
   const lastMsgCount = useRef(0);
 
-  // ── UI Layout State ──────────────────────────────────────────
   const [isDark, setIsDark] = useState(true);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showChat, setShowChat] = useState(false);
   
-  // ── Lifeycle State ───────────────────────────────────────────
   const [hasStarted, setHasStarted] = useState(false);
   const [isFinished, setIsFinished] = useState(false);
 
-  // ── App State ─────────────────────────────────────────────────
   const [problem, setProblem] = useState(null);
   const [code, setCode] = useState(`#include <iostream>\nusing namespace std;\n\nint main() {\n    // Write your code here\n    return 0;\n}`);
   const [userInput, setUserInput] = useState("");
@@ -44,7 +40,6 @@ const Interview = () => {
   const welcomePlayed = useRef(false);
   const chatEndRef = useRef(null);
 
-  // Check microphone permission on mount
   useEffect(() => {
     if (navigator.permissions) {
       navigator.permissions.query({ name: 'microphone' }).then(status => {
@@ -54,7 +49,6 @@ const Interview = () => {
     }
   }, []);
 
-  // ── Theme tokens (ScholarSync Design System) ────────────────
   const T = {
     bg:        isDark ? "#020810"                    : "#f0f4fa",
     panel:     isDark ? "#050d1c"                    : "#ffffff",
@@ -77,7 +71,6 @@ const Interview = () => {
     toolbarBg: isDark ? "#050d1c"                    : "#f0f4fa",
   };
 
-  // Auto-scroll chat
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [chatLog, isThinking]);
@@ -86,7 +79,6 @@ const Interview = () => {
     try { globalAudioContext.pause(); globalAudioContext.currentTime = 0; } catch (e) {}
   }, []);
 
-  // Play audio safely
   const playBase64Audio = useCallback((base64String) => {
     try {
       if (!base64String) return;
@@ -97,14 +89,12 @@ const Interview = () => {
       if (playPromise !== undefined) {
         playPromise.catch(e => {
             console.error("Audio playback error:", e);
-            // Fallback: try to play after a small delay
             setTimeout(() => globalAudioContext.play().catch(m => console.log("Still blocked")), 500);
         });
       }
     } catch (e) { console.error(e); }
   }, [stopAudio]);
 
-  // Fetch Problem
   useEffect(() => {
     const fetchProblem = async () => {
       try {
@@ -115,7 +105,6 @@ const Interview = () => {
     fetchProblem();
   }, [problemId, API_URL]);
 
-  // Welcome audio
   useEffect(() => {
     if (problem && !welcomePlayed.current) {
       welcomePlayed.current = true;
@@ -294,7 +283,6 @@ const Interview = () => {
   }
 
 
-  // ── Toolbar icon styles (ScholarSync) ───────────────────────
   const iconBtn = (bg = T.panel2) => ({
     background: bg,
     border: `1px solid ${T.border}`,

@@ -7,7 +7,6 @@ const api = axios.create({
   withCredentials: true,
 });
 
-// Attach token on each request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('expertToken');
   if (token) config.headers.Authorization = `Bearer ${token}`;

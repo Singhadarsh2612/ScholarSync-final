@@ -56,14 +56,12 @@ def delete_event_title(data: dict):
 def update_event_title(data: dict):
     return update_event_by_title(data)
 
-# -------- TOOL: GET SUBJECT PROFESSORS --------
 @app.post("/tools/get_subject_professors")
 def run_get_subject_professors():
 
     return get_subject_professors()
 
-# -------- TOOL: GET STUDENT CONNECTIONS --------
 @app.post("/tools/get_student_connections")
 def run_get_student_connections():
 
-    return get_student_connections()
+    return get_student_connections()

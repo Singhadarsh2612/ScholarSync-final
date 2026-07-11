@@ -1,4 +1,3 @@
-# chatbot/threads.py
 
 from . import memory
 from .config import DATABASE_URL
@@ -82,4 +81,4 @@ async def delete_thread(thread_id: str):
         print("DB connection error on delete:", e)
         return False
 
-    return True
+    return True

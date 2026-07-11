@@ -7,7 +7,6 @@ require('dotenv').config();
 const mongoose = require('mongoose');
 const dns = require('dns');
 
-// Force using Google DNS to resolve MongoDB Atlas SRV records
 dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const Expert = require('../models/Expert');
@@ -102,11 +101,9 @@ const seed = async () => {
     await mongoose.connect(MONGO_URI);
     console.log('✅ Connected to MongoDB');
     console.log("🔗 Connecting to:", process.env.MONGO_URI || process.env.MONGODB_URI);
-    // Clear existing experts
     await Expert.deleteMany({});
     console.log('🗑️  Cleared existing experts');
 
-    // Insert new experts
     for (const expertData of experts) {
       const expert = new Expert(expertData);
       await expert.save(); // triggers password hashing

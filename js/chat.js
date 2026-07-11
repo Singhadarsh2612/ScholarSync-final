@@ -53,10 +53,8 @@ export async function sendMessage(){
 
         }
 
-        // Post-process the final text for dynamic UI injection
         let finalTxt = accumulatedText;
 
-        // Redirect Interceptor
         if (finalTxt.includes("[REDIRECT:assignment_solver]")) {
             window.location.href = "assignment_solver.html";
             return;
@@ -70,7 +68,6 @@ export async function sendMessage(){
             return;
         }
 
-        // Use the shared post-processing for UI cards
         postProcessBotDiv(botDiv, finalTxt);
 
     }

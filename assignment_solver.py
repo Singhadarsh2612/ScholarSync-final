@@ -5,7 +5,6 @@ from io import BytesIO
 from pypdf import PdfReader
 from dotenv import dotenv_values
 
-# ---------------- ENV ----------------
 
 env = dotenv_values(".env")
 GROQ_KEY = env.get("GROQ_API_KEY")
@@ -21,7 +20,6 @@ os.makedirs(CACHE_DIR, exist_ok=True)
 os.makedirs(PDF_DIR, exist_ok=True)
 
 
-# ---------------- GOOGLE DRIVE LINK FIX ----------------
 
 def convert_drive_link(url):
 
@@ -38,13 +36,11 @@ def convert_drive_link(url):
     return url
 
 
-# ---------------- DOWNLOAD PDF ----------------
 
 def download_pdf(url):
 
     url = convert_drive_link(url)
 
-    # extract real Google Drive id
     match = re.search(r'id=([a-zA-Z0-9_-]+)', url)
 
     if match:
@@ -64,7 +60,6 @@ def download_pdf(url):
 
     return path
 
-# ---------------- READ PDF ----------------
 
 def load_pdf_text(path):
 
@@ -80,7 +75,6 @@ def load_pdf_text(path):
     return text
 
 
-# ---------------- Azure AI Search RAG ----------------
 
 def _get_search_client():
     from azure.core.credentials import AzureKeyCredential
@@ -160,7 +154,6 @@ def _index_documents(chunks: list, doc_key: str):
             "content": chunk,
             "embedding": _embed(chunk)
         })
-    # Upload in batches of 100
     for i in range(0, len(docs), 100):
         client.upload_documents(documents=docs[i:i+100])
     print(f"Indexed {len(docs)} chunks into Azure AI Search.")
@@ -231,7 +224,6 @@ def solve_assignment(question, history, assignment_url, material_urls):
         api_version="2024-02-15-preview"
     )
 
-    # Agent 1: Query Understanding
     query_reformulation_prompt = f"""
 You are an expert search query reformulator.
 The user is asking a question about their assignment.
@@ -245,11 +237,9 @@ Return ONLY the reformulated search query, without quotes.
     search_query = llm.invoke(query_reformulation_prompt).content.strip()
     print(f"[AssignmentHelper] Reformulated Query: {search_query}")
 
-    # Retrieve relevant chunks via vector search using the optimized query
     context_chunks = _vector_search(search_query, doc_keys)
     vector_context = "\n\n".join(context_chunks)
 
-    # Also load the raw assignment text so the LLM always sees all questions
     raw_assignment_text = ""
     if assignment_url:
         try:
@@ -304,7 +294,6 @@ Context:
     return answer
 
 
-# ---------------- FULL ASSIGNMENT SOLVER ----------------
 
 def solve_entire_assignment(assignment_url, material_urls):
 
@@ -314,7 +303,6 @@ def solve_entire_assignment(assignment_url, material_urls):
 
     assignment_text = load_pdf_text(assignment_path)
 
-    # LIMIT assignment size (important)
     assignment_text = assignment_text[:8000]
 
     llm = AzureChatOpenAI(
@@ -344,7 +332,6 @@ ASSIGNMENT:
     return response.content
 
 
-# ---------------- GENERATE SOLUTION PDF ----------------
 
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
 from reportlab.lib.styles import getSampleStyleSheet
@@ -360,17 +347,13 @@ def generate_solution_pdf(solution_text, assignment_id):
     styles = getSampleStyleSheet()
     story = []
 
-    # Simple Markdown to ReportLab XML conversion
-    # Note: ReportLab Paragraph supports <b>, <i>, <u>, <font>, <br/>
     
-    # Process line by line for headers to avoid splitting issues
     for line in solution_text.split("\n"):
         line = line.strip()
         if not line:
             story.append(Spacer(1, 6))
             continue
             
-        # Headers
         if line.startswith("### "):
             line = f'<font size="13" color="#1060f0"><b>{line[4:]}</b></font>'
         elif line.startswith("## "):
@@ -378,18 +361,14 @@ def generate_solution_pdf(solution_text, assignment_id):
         elif line.startswith("# "):
             line = f'<font size="17" color="#1060f0"><b>{line[2:]}</b></font>'
             
-        # Bold: **text** -> <b>text</b>
         line = re.sub(r'\*\*(.*?)\*\*', r'<b>\1</b>', line)
-        # Italic: *text* -> <i>text</i>
         line = re.sub(r'\*(.*?)\*', r'<i>\1</i>', line)
-        # List bullets: - text -> &bull; text
         if line.startswith("- "):
             line = "&bull; " + line[2:]
 
         try:
             story.append(Paragraph(line, styles["Normal"]))
         except:
-            # Fallback if XML tags are malformed
             story.append(Paragraph(re.sub(r'<.*?>', '', line), styles["Normal"]))
             
         story.append(Spacer(1, 6))

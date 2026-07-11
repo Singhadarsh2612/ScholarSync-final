@@ -11,7 +11,6 @@ All functions are synchronous.  The Executor wraps them in asyncio.to_thread.
 import json
 import requests
 
-# ── Student portal constants ──────────────────────────────────────────────────
 _STUDENT_ID   = "69ad240e7352e15b1e37b844"
 _STUDENT_ID_2 = "69abdbea843e1db183a2b20f"
 
@@ -24,7 +23,6 @@ _EXAM_SCHED_URL  = f"https://student-portal-2-gh1j.onrender.com/api/student/{_ST
 _INTERVIEW_URL   = "https://scholarsync-aps-backend.azurewebsites.net/api/interview_routing"
 _FRONTEND_BASE   = "https://scholarsync-aps-client.azurewebsites.net"
 
-# Pre-fetch interview routing once at module load
 try:
     _iv_resp = requests.get(_INTERVIEW_URL, timeout=15)
     _iv_resp.raise_for_status()
@@ -36,7 +34,6 @@ except Exception as _e:
     _interview_mapping = {}
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
 
 def _get(url: str, timeout: int = 55, retries: int = 1):
     """GET with retry — Render free-tier services cold-start in 30-50s."""
@@ -52,9 +49,6 @@ def _get(url: str, timeout: int = 55, retries: int = 1):
 
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# DATA TOOLS
-# ══════════════════════════════════════════════════════════════════════════════
 
 def get_assignments_raw() -> list:
     """Return list of upcoming assignments as plain dicts."""
@@ -223,9 +217,6 @@ def solve_assignment_raw(question: str = "", assignment_url: str = "",
         return {"error": str(e)}
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# MCP TOOL WRAPPERS  (synchronous — call the MCP server on port 8002)
-# ══════════════════════════════════════════════════════════════════════════════
 
 import requests as _req
 
@@ -240,8 +231,6 @@ def _mcp_post(endpoint: str, payload: dict = None) -> str:
         if "result" in data:
             return data["result"]
         if data.get("status") == "success":
-            # If there's a message field, return it; otherwise return full payload
-            # so structured responses (e.g. subjects list) are not silently discarded.
             if "message" in data:
                 return data["message"]
             return json.dumps(data)
@@ -301,13 +290,8 @@ def open_interview_in_browser_raw(topic: str = "", **_) -> str:
     return f"Interview session ready. URL: {result['url']}"
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# UNIFIED TOOL MAP  (tool_name → callable)
-# All functions accept keyword args matching their parameter names.
-# ══════════════════════════════════════════════════════════════════════════════
 
 TOOL_MAP: dict = {
-    # Data tools
     "get_assignments_raw":            get_assignments_raw,
     "get_materials_raw":              get_materials_raw,
     "get_marks_raw":                  get_marks_raw,
@@ -316,7 +300,6 @@ TOOL_MAP: dict = {
     "get_interview_info_raw":         get_interview_info_raw,
     "prepare_interview_session_raw":  prepare_interview_session_raw,
     "solve_assignment_raw":           solve_assignment_raw,
-    # MCP / action tools
     "current_time":                   current_time_raw,
     "calculator":                     calculator_raw,
     "web_search":                     web_search_raw,
@@ -333,10 +316,8 @@ TOOL_MAP: dict = {
 
 KNOWN_TOOL_NAMES: set = set(TOOL_MAP.keys())
 
-# Tools that always require explicit user confirmation before execution
 CONFIRMATION_TOOLS: set = {"send_email", "open_interview_in_browser"}
 
-# Tools that may only be called once per turn
 ONCE_ONLY_TOOLS: set = {
     "send_email", "get_assignments_raw", "get_materials_raw",
     "open_interview_in_browser",

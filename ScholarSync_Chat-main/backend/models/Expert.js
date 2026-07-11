@@ -10,7 +10,6 @@ const expertSchema = new mongoose.Schema({
   subject: {
     type: String,
     required: [true, 'Subject is required'],
-    // Normalized key used in API calls
     enum: [
       'computer_networks',
       'operating_systems',
@@ -52,7 +51,6 @@ const expertSchema = new mongoose.Schema({
   timestamps: true,
 });
 
-// Hash password before saving
 expertSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
   const salt = await bcrypt.genSalt(10);
@@ -60,12 +58,10 @@ expertSchema.pre('save', async function (next) {
   next();
 });
 
-// Compare passwords
 expertSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
 
-// Don't return password in JSON
 expertSchema.methods.toJSON = function () {
   const obj = this.toObject();
   delete obj.password;

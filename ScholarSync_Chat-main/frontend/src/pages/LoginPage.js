@@ -10,7 +10,6 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  // Redirect if already logged in
   if (expert) { navigate('/dashboard'); return null; }
 
   const handleSubmit = async (e) => {

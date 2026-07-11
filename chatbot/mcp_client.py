@@ -6,7 +6,6 @@ from chatbot.mcp_server.tools.get_subject_professors import get_subject_professo
 MCP_URL = "http://127.0.0.1:8002"
 
 
-# ---------------- Helper ----------------
 def call_mcp(endpoint, payload=None):
 
     try:
@@ -21,7 +20,6 @@ def call_mcp(endpoint, payload=None):
 
         data = r.json()
 
-        # Calendar event response
         if data.get("status") == "success":
 
             if "event_url" in data:
@@ -32,7 +30,6 @@ def call_mcp(endpoint, payload=None):
 
             return data.get("message", "Success")
 
-        # Normal responses
         if "result" in data:
             return data["result"]
 
@@ -45,7 +42,6 @@ def call_mcp(endpoint, payload=None):
         return f"MCP tool error: {str(e)}"
 
 
-# ---------------- Calculator ----------------
 @tool
 def calculator(expression: str) -> str:
     """Calculate mathematical expressions."""
@@ -56,7 +52,6 @@ def calculator(expression: str) -> str:
     )
 
 
-# ---------------- Web Search ----------------
 @tool
 def web_search(query: str) -> str:
     """Search the web."""
@@ -67,7 +62,6 @@ def web_search(query: str) -> str:
     )
 
 
-# ---------------- Current Time ----------------
 @tool
 def current_time() -> str:
     """Get system time."""
@@ -75,7 +69,6 @@ def current_time() -> str:
     return call_mcp("/tools/current_time")
 
 
-# ---------------- Send Email ----------------
 @tool
 def send_email(to: str, subject: str, body: str) -> str:
     """Send email using SendGrid."""
@@ -90,7 +83,6 @@ def send_email(to: str, subject: str, body: str) -> str:
     )
 
 
-# ---------------- Create Calendar Event ----------------
 @tool
 def create_calendar_event(title: str, start_time: str, end_time: str, reminder_minutes: int | None = None) -> str:
     """Create a Google Calendar event. start_time and end_time are heavily REQUIRED in ISO 8601 format. If user didn't provide time, return an error asking them."""
@@ -109,7 +101,6 @@ def create_calendar_event(title: str, start_time: str, end_time: str, reminder_m
     return call_mcp("/tools/create_calendar_event", payload)
 
 
-# ---------------- Delete Calendar Event ----------------
 @tool
 def delete_calendar_event(event_id: str) -> str:
     """Delete a calendar event by event ID."""
@@ -122,7 +113,6 @@ def delete_calendar_event(event_id: str) -> str:
     )
 
 
-# ---------------- Find Event By Title ----------------
 @tool
 def find_event_by_title(title: str) -> str:
     """Find calendar events matching a title."""
@@ -135,7 +125,6 @@ def find_event_by_title(title: str) -> str:
     )
 
 
-# ---------------- Check Calendar Free ----------------
 @tool
 def check_calendar_free(start_time: str, end_time: str) -> str:
     """Check if a calendar time slot is free."""
@@ -149,7 +138,6 @@ def check_calendar_free(start_time: str, end_time: str) -> str:
     )
 
 
-# ---------------- List Calendar Events ----------------
 @tool
 def list_calendar_events(date: str) -> str:
     """List all calendar events on a given date (YYYY-MM-DD)."""

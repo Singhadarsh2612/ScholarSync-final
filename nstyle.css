@@ -28,7 +28,6 @@ html, body {
   height: 100vh;
 }
 
-/* ── SIDEBAR ── */
 .sidebar {
   width: 250px;
   min-width: 250px;
@@ -120,7 +119,6 @@ html, body {
   border-top: 1px solid var(--border);
 }
 
-/* ── MAIN PANEL ── */
 .main-panel {
   flex: 1;
   display: flex;

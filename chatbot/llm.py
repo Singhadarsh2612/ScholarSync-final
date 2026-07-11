@@ -17,7 +17,6 @@ from langchain_openai import AzureChatOpenAI
 
 load_dotenv()
 
-# ── KEY 1 — ComplexityAnalyzer + SimpleRetriever ─────────────────────────────
 llm_mini_1 = AzureChatOpenAI(
     azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", ""),
     api_key=os.getenv("AZURE_OPENAI_API_KEY", ""),
@@ -28,7 +27,6 @@ llm_mini_1 = AzureChatOpenAI(
     streaming=False,
 )
 
-# ── KEY 2 — Explorers, FitnessEvaluator, Exploiter, PresentationAgent, Critic
 llm_mini_2 = AzureChatOpenAI(
     azure_endpoint=os.getenv("MINI_2_ENDPOINT", ""),
     api_key=os.getenv("MINI_2_API_KEY", ""),
@@ -39,7 +37,6 @@ llm_mini_2 = AzureChatOpenAI(
     streaming=False,
 )
 
-# ── KEY 3 — Planner ONLY (GPT-4o) ────────────────────────────────────────────
 llm_4o = AzureChatOpenAI(
     azure_endpoint=os.getenv("GPT4O_ENDPOINT", ""),
     api_key=os.getenv("GPT4O_API_KEY", ""),
@@ -50,7 +47,6 @@ llm_4o = AzureChatOpenAI(
     streaming=False,
 )
 
-# ── Legacy aliases ─────────────────────────────────────────────────────────────
 llm      = llm_mini_1   # general-purpose fallback
 tool_llm = llm_mini_2   # tool-calling fallback
 

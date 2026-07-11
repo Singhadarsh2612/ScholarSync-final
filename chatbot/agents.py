@@ -18,7 +18,6 @@ async def critic_node(state: dict) -> dict:
     Short-circuits to APPROVE for redirects and interview confirm cards.
     Uses llm_mini_2 (key2) — lightweight check.
     """
-    # Short-circuit: redirect or interview card
     for m in reversed(state.get("messages", [])):
         if getattr(m, "type", "") == "ai" and m.content:
             if "[REDIRECT:" in m.content or "ui_interview_confirm" in m.content:
@@ -28,7 +27,6 @@ async def critic_node(state: dict) -> dict:
                     "messages":          [],
                 }
 
-    # Build clean message list (human + ai text only — no tool messages)
     clean = []
     for m in state.get("messages", [])[-8:]:
         if getattr(m, "type", "") == "human":
@@ -42,7 +40,6 @@ async def critic_node(state: dict) -> dict:
     feedback = res.content or "APPROVE"
     iterations = state.get("critic_iterations", 0) + 1
 
-    # On retry: inject feedback as HumanMessage for Exploiter on next pass
     extra_msgs = []
     if "APPROVE" not in feedback.upper():
         extra_msgs = [HumanMessage(

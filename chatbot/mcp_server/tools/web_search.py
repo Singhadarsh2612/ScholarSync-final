@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from ..config import tavily_client
 
 def web_search(data):

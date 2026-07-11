@@ -4,26 +4,20 @@ import { sendMessage } from "./chat.js?v=14";
 import { loadHistory, loadThreads, deleteCurrentThread } from "./history.js";
 import { initSidebarSync } from "./sidebar.js";
 
-// Initialize application after DOM is ready
 document.addEventListener("DOMContentLoaded", async () => {
 
 try {
 
-    // Ensure thread exists
     if (!getThreadID()) {
         setThreadID(generateThreadID());
     }
 
-    // Initialize sidebar history sync
     initSidebarSync();
 
-    // Load all threads from backend
     await loadThreads();
 
-    // Load current thread chat history
     await loadHistory();
 
-    // Setup Enter key send handler
     const messageInput = document.getElementById("message");
 
     if (messageInput) {
@@ -50,7 +44,6 @@ try {
 
 });
 
-// Expose functions globally for HTML usage
 window.sendMessage = sendMessage;
 window.newChat = newChat;
 window.switchThread = switchThread;

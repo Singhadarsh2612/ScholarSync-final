@@ -7,7 +7,6 @@ import {
     Tooltip, ResponsiveContainer
 } from "recharts";
 
-// This global audio context unlocking ensures the browser trusts subsequent audio.plays()
 export const globalAudioContext = new Audio();
 globalAudioContext.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA="; // 1ms silent wav
 
@@ -27,13 +26,11 @@ const CustomTooltip = ({ active, payload }) => {
 const Landing = () => {
     const navigate = useNavigate();
     const API_URL = process.env.REACT_APP_API_URL || "https://codeide-backend.mangopebble-d7a787f1.centralindia.azurecontainerapps.io";
-    // eslint-disable-next-line no-unused-vars
     const { session, userId, startSession, setResumeData, clearSession, hasActiveSession } = useSession();
     const [resumeFile, setResumeFile] = useState(null);
     const [isParsing, setIsParsing] = useState(false);
     const [parsedData, setParsedData] = useState(null);
     const [rawData, setRawData] = useState(null);
-    // Reuse an existing session ID from context, or create a new one (using userId for persistent thread)
     const [sessionId] = useState(
         () => session.sessionId || userId || Math.random().toString(36).substring(7)
     );
@@ -51,7 +48,6 @@ const Landing = () => {
             if (res.data.success) {
                 const cv = res.data.data || {};
                 setRawData(cv);
-                // Persist to session context
                 setResumeData(resumeFile.name, cv);
                 const name = cv.name || "Candidate";
                 const skills = (cv.skills && Object.values(cv.skills).flat().filter(Boolean).join(", ")) || "Extracted core skills.";
@@ -71,18 +67,15 @@ const Landing = () => {
     };
 
     const handleStartInterview = async () => {
-        // Persist session to context before navigating
         startSession(sessionId);
         try { 
             globalAudioContext.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
             globalAudioContext.load();
             globalAudioContext.play().catch(e => console.warn("Audio unlock prevented", e)); 
         } catch(e){}
-        // Navigate to topic selection first
         navigate(`/topics?session=${sessionId}`);
     };
 
-    // Prepare chart data from skills object: { languages: [], tools: [], concepts: [] }
     const getSkillsPieData = () => {
         if (!rawData || !rawData.skills) return [];
         const sk = rawData.skills;
@@ -106,7 +99,6 @@ const Landing = () => {
     const skillsPieData = getSkillsPieData();
     const barData = getBarData();
 
-    // ── ScholarSync background system ──────────────────────────────
     const bgStyle = {
         minHeight: "100vh",
         width: "100vw",

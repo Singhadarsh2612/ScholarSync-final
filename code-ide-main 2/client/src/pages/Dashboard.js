@@ -6,7 +6,6 @@ import {
     Tooltip as RechartsTooltip, ResponsiveContainer, Legend
 } from "recharts";
 
-// ScholarSync Design Tokens
 const SS = {
     bg:      "#020810",
     panel:   "linear-gradient(145deg, #0c1d3a, #08152a)",

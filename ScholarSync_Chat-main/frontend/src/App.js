@@ -7,7 +7,6 @@ import DashboardPage from './pages/DashboardPage';
 import ChatRoomPage from './pages/ChatRoomPage';
 import './styles/globals.css';
 
-// Guard for expert-only routes
 const PrivateRoute = ({ children }) => {
   const { expert, loading } = useAuth();
   if (loading) return <div className="loading-screen"><span className="spin">◌</span></div>;

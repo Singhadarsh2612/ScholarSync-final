@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from ..calendar_auth import get_calendar_service, CALENDAR_ID
 from datetime import datetime, timezone
 
@@ -12,7 +13,6 @@ def delete_event_by_title(data):
 
         service = get_calendar_service()
 
-        # Get upcoming events
         events_result = service.events().list(
             calendarId=CALENDAR_ID,
             timeMin=datetime.now(timezone.utc).isoformat(),
@@ -27,7 +27,6 @@ def delete_event_by_title(data):
 
             summary = event.get("summary", "").strip().lower()
 
-            # Debug print
             print("Checking event:", summary)
 
             if title in summary:

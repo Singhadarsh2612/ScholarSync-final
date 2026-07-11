@@ -12,7 +12,6 @@ async def main():
     async with AsyncPostgresSaver.from_conn_string(DATABASE_URL) as saver:
         await saver.setup()
 
-# ✅ FIX for Windows psycopg async
 if __name__ == "__main__":
     asyncio.run(
         main(),

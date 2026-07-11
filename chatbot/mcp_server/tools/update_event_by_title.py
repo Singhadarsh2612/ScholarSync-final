@@ -1,7 +1,7 @@
+# pyrefly: ignore [missing-import]
+from ..calendar_auth import get_calendar_service, CALENDAR_ID
 from datetime import datetime
 import pytz
-from ..calendar_auth import get_calendar_service, CALENDAR_ID
-
 IST = pytz.timezone("Asia/Kolkata")
 
 
@@ -17,7 +17,6 @@ def update_event_by_title(data):
 
         service = get_calendar_service()
 
-        # fetch more events and include future events
         events_result = service.events().list(
             calendarId=CALENDAR_ID,
             maxResults=250,

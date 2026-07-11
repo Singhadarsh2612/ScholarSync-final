@@ -4,7 +4,6 @@ import datetime
 import uuid
 
 def save_session(state):
-    # 1. Save standard conversational state to 'chat_sessions'
     chat_coll = get_collection("chat_sessions")
     if chat_coll is None:
         return
@@ -23,7 +22,6 @@ def save_session(state):
         item["session_id"] = session_id
         chat_coll.insert_one(item)
 
-    # 2. If there's an evaluation, strictly adhere to the user's `interview_sessions` schema
     eval_history = state.get("eval_history", [])
     if eval_history and len(eval_history) > 0:
         latest_eval = eval_history[-1]
@@ -87,10 +85,8 @@ def record_interview_attempt_schema(topic_slug, eval_data):
     doc["performance_score"] = doc["average_score"]
     doc["description_of_performance"] = f"Average score across {doc['number_of_attempts']} attempts is {doc['average_score']:.1f}."
     
-    # Update performance analysis based on latest attempt
     doc["recent_performance_analysis"] = new_attempt["feedback"]
     
-    # Update overall performance and trend
     avg = doc["average_score"]
     if avg >= 80:
         doc["overall_performance"] = "Excellent"

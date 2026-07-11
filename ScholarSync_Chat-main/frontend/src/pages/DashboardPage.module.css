@@ -5,7 +5,6 @@
   overflow: hidden;
 }
 
-/* ── Sidebar ──────────────────────────────────────────────── */
 .sidebar {
   width: 260px;
   min-width: 260px;
@@ -132,7 +131,6 @@
 }
 .logoutBtn:hover { background: rgba(239,68,68,0.2); }
 
-/* ── Main ─────────────────────────────────────────────────── */
 .main {
   flex: 1;
   overflow-y: auto;
@@ -166,7 +164,6 @@
   border-radius: 99px;
 }
 
-/* ── Section ──────────────────────────────────────────────── */
 .section { margin-bottom: 2.5rem; }
 
 .sectionHeader {
@@ -194,7 +191,6 @@
 }
 .refreshBtn:hover { color: var(--accent); border-color: var(--accent); }
 
-/* ── Notifications ────────────────────────────────────────── */
 .notifList { display: flex; flex-direction: column; gap: 0.6rem; }
 
 .notifCard {
@@ -221,7 +217,6 @@
 }
 .joinBtn:hover { transform: translateY(-1px); }
 
-/* ── Room Grid ────────────────────────────────────────────── */
 .roomGrid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
@@ -302,7 +297,6 @@
 }
 .deleteSessionBtn:hover { background: rgba(239, 68, 68, 0.2); border-color: #ef4444; }
 
-/* ── Empty / Loader ───────────────────────────────────────── */
 .emptyState {
   background: var(--bg-surface);
   border: 1px dashed var(--border);
@@ -315,7 +309,6 @@
 
 .loader { color: var(--text-secondary); padding: 2rem; text-align: center; display: flex; align-items: center; gap: 0.5rem; justify-content: center; }
 
-/* ── Modal ────────────────────────────────────────────────── */
 .modalOverlay {
   position: fixed;
   inset: 0;

@@ -1,4 +1,3 @@
-# engine.py
 import cv2
 import numpy as np
 import requests
@@ -14,9 +13,7 @@ def get_eye_direction(frame):
     return "Eyes Center"
 
 
-# Violation type → display info
 VIOLATION_MAP = {
-    # Mobile / electronic devices
     "cell phone": {
         "type": "MOBILE",
         "severity": "HIGH",
@@ -47,7 +44,6 @@ VIOLATION_MAP = {
         "alert": "⌨️ Note: External keyboard detected.",
         "detail": "Ensure only permitted peripherals are used."
     },
-    # Books / printed materials
     "book": {
         "type": "BOOK",
         "severity": "HIGH",
@@ -60,7 +56,6 @@ VIOLATION_MAP = {
         "alert": "📰 VIOLATION: Printed material detected!",
         "detail": "No printed reference materials allowed."
     },
-    # Suspicious items
     "toothbrush": {
         "type": "SUSPICIOUS",
         "severity": "MEDIUM",
@@ -112,7 +107,6 @@ class ProctorEngine:
         detections = []
         violations = []   # Structured violation list for frontend
 
-        # ── 1. YOLO Detection ────────────────────────────────────────
         if self.model is not None:
             results = self.model(frame, conf=0.2)
             person_count = 0
@@ -151,7 +145,6 @@ class ProctorEngine:
                             })
                             print(f"[PROCTOR] {vdef['severity']} VIOLATION: {name}")
 
-            # Multi-face detection
             if person_count >= 2:
                 msg = f"🚨 HIGH ALERT: {person_count} persons detected in frame!"
                 alerts.append(msg)
@@ -167,7 +160,6 @@ class ProctorEngine:
             
             print(f"[PROCTOR] Frame processed: {person_count} persons, {len(violations)} violations, {len(detections)} detections")
 
-        # ── 2. Azure Face API (optional) ─────────────────────────────
         if run_face_api and self.azure_key:
             try:
                 res = requests.post(
@@ -197,7 +189,6 @@ class ProctorEngine:
             except Exception as e:
                 print(f"[AZURE FACE] Exception: {e}")
 
-        # Deduplicate alerts
         alerts = list(dict.fromkeys(alerts))
 
         return {
@@ -207,7 +198,6 @@ class ProctorEngine:
         }
 
 
-# Lazy singleton
 _engine_instance = None
 
 def get_engine() -> ProctorEngine:

@@ -12,12 +12,10 @@ const ProctorMonitor = ({ sessionId, onAutoSubmit, isActive, inline }) => {
   const streamRef = useRef(null); // To hold the MediaStream object
   const intervalRef = useRef(null); // To hold the interval ID
 
-  // Refs for values used inside setInterval (avoids stale closures)
   const hasPermissionRef = useRef(false);
   const warningCountRef = useRef(0);
   const frameIdRef = useRef(0);
 
-  // UI state only
   const [permError, setPermError] = useState(null);
   const [cameraReady, setCameraReady] = useState(false);
   const [facesDetected, setFacesDetected] = useState(0);
@@ -27,13 +25,11 @@ const ProctorMonitor = ({ sessionId, onAutoSubmit, isActive, inline }) => {
 
   const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
-  // ── Core: send a frame to the backend ────────────────────────────────────
   const sendFrame = useCallback(async () => {
     if (!hasPermissionRef.current || !isActive) return; // Ensure active before sending
     const video = videoRef.current;
     if (!video || video.readyState < 2) return;
 
-    // Capture frame
     const tmp = document.createElement("canvas");
     tmp.width = 640;
     tmp.height = 480;
@@ -69,7 +65,6 @@ const ProctorMonitor = ({ sessionId, onAutoSubmit, isActive, inline }) => {
     }
   }, [sessionId, API_URL, isActive]); // Add isActive to dependencies
 
-  // ── Draw bounding boxes on canvas overlay ────────────────────────────────
   function drawDetections(detections, faceCount) {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -119,7 +114,6 @@ const ProctorMonitor = ({ sessionId, onAutoSubmit, isActive, inline }) => {
       warningText = `Warning ${count}. Please stop this. If you continue, your interview will be submitted.`;
     }
 
-    // Call backend for TTS
     axios.post(`${API_URL}/ai/warning_tts`, { text: warningText })
       .then(res => {
         if (res.data?.audio) playBase64Audio(res.data.audio);
@@ -132,7 +126,6 @@ const ProctorMonitor = ({ sessionId, onAutoSubmit, isActive, inline }) => {
     }
   }, [API_URL, onAutoSubmit]);
 
-  // Camera Lifecycle Manager
   useEffect(() => {
     let isMounted = true;
     let localStream = null;
@@ -162,7 +155,6 @@ const ProctorMonitor = ({ sessionId, onAutoSubmit, isActive, inline }) => {
         }
       }
 
-      // If unmounted while fetching, kill the tracks immediately
       if (!isMounted) {
         if (localStream) {
           localStream.getTracks().forEach(track => track.stop());
@@ -183,7 +175,6 @@ const ProctorMonitor = ({ sessionId, onAutoSubmit, isActive, inline }) => {
             setPermError(null);
             console.log("[Proctor] Camera started ✓");
 
-            // Start the frame sending loop once video is genuinely active
             if (intervalRef.current) clearInterval(intervalRef.current);
             intervalRef.current = setInterval(() => {
               if (streamRef.current) {
@@ -243,7 +234,6 @@ const ProctorMonitor = ({ sessionId, onAutoSubmit, isActive, inline }) => {
 
   if (!isActive) return null;
 
-  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <div style={
       inline 

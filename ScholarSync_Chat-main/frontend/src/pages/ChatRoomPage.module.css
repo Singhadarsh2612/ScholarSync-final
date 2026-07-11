@@ -25,7 +25,6 @@
   gap: 0.5rem;
 }
 
-/* ── Top Bar ──────────────────────────────────────────────── */
 .topBar {
   height: 60px;
   min-height: 60px;
@@ -164,7 +163,6 @@
 }
 .dashBtn:hover { color: var(--text-primary); border-color: var(--text-secondary); }
 
-/* ── Banners ──────────────────────────────────────────────── */
 .callBanner {
   background: rgba(52, 211, 153, 0.12);
   border-bottom: 1px solid rgba(52,211,153,0.3);
@@ -204,7 +202,6 @@
   align-items: center;
 }
 
-/* ── Content area ─────────────────────────────────────────── */
 .content {
   flex: 1;
   display: flex;
@@ -212,7 +209,6 @@
   min-height: 0;
 }
 
-/* ── User Sidebar ────────────────────────────────────────── */
 .sidebar {
   width: 280px;
   min-width: 280px;
@@ -328,7 +324,6 @@
   border-radius: var(--radius-md);
 }
 
-/* Responsiveness */
 @media (max-width: 900px) {
   .sidebar {
     display: none; /* Hide sidebar on small screens to prioritize chat */

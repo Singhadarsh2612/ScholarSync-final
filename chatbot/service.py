@@ -45,14 +45,12 @@ async def chat_stream(user_message: str, thread_id: str):
             yield f"⚠️ An error occurred: {str(e)[:200]}"
             return
 
-        # ── 1. Read the formatted response from PresentationAgent ────────────
         final_response: str = final_state.get("final_response", "")
 
         if not final_response:
             yield "⚠️ The agent was unable to produce a response. Please try again."
             return
 
-        # ── 2. Planner-driven UI injection ───────────────────────────────────
         ui_req  = final_state.get("ui_requirement") or {}
         ui_block = ""
 
@@ -72,9 +70,6 @@ async def chat_stream(user_message: str, thread_id: str):
                     raw_data = r.get("result")
                     break
 
-            # Fallback: interview_confirm needs prepare_interview_session_raw data,
-            # but the executor may only have a skipped open_interview_in_browser.
-            # In that case, call prepare_interview_session_raw directly.
             if raw_data is None and ui_type == "interview_confirm":
                 for r in final_state.get("execution_results", []):
                     if r.get("tool") == "open_interview_in_browser" and r.get("skipped"):
@@ -91,10 +86,8 @@ async def chat_stream(user_message: str, thread_id: str):
             else:
                 print(f"[UI] WARNING: No raw_data found for {tool_name}")
 
-        # Build final streamed text — UI block first, then formatted response
         output_text = (ui_block + "\n\n" + final_response).strip() if ui_block else final_response
 
-        # ── 3. Stream in chunks ──────────────────────────────────────────────
         yield "\n\n**Agent Network**:\n"
         chunk_size = 15
         for i in range(0, len(output_text), chunk_size):

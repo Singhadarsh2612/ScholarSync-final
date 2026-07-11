@@ -18,7 +18,6 @@ const ChatRoomPage = () => {
 
   const role = expert ? 'expert' : 'user';
 
-  // ── Session History ───────────────────────────────────────────────────────
   const [history, setHistory] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
@@ -33,10 +32,8 @@ const ChatRoomPage = () => {
 
   const typingTimeout = useRef(null);
 
-  // WebRTC hook
   const webrtc = useWebRTC({ socket, roomId, isExpert: !!expert });
 
-  // ── Fetch room info + message history ─────────────────────────────────────
   useEffect(() => {
     const init = async () => {
       try {
@@ -55,14 +52,12 @@ const ChatRoomPage = () => {
     init();
   }, [roomId]);
 
-  // Fetch full subject history from backend (matches expert view)
   const fetchSubjectHistory = useCallback(async () => {
     if (role !== 'user' || !roomInfo?.subject) return;
 
     setLoadingHistory(true);
     try {
       const { data } = await api.get(`/chat/subject-rooms/${roomInfo.subject}`);
-      // Only keep rooms of same subject, excluding current room
       const sameSubjectRooms = data.filter(r => r.roomId !== roomId);
       setHistory(sameSubjectRooms);
     } catch (err) {
@@ -76,7 +71,6 @@ const ChatRoomPage = () => {
     fetchSubjectHistory();
   }, [fetchSubjectHistory]);
 
-  // ── Delete Room ───────────────────────────────────────────────────────────
   const handleDeleteRoom = async (e, targetRoomId) => {
     e.stopPropagation(); // prevent navigation
     if (!window.confirm('Delete this chat history permanently?')) return;
@@ -94,7 +88,6 @@ const ChatRoomPage = () => {
     }
   };
 
-  // ── Join socket room ───────────────────────────────────────────────────────
   useEffect(() => {
     if (!socket || !connected || !roomInfo) return;
     socket.emit('joinRoom', {
@@ -104,7 +97,6 @@ const ChatRoomPage = () => {
     });
   }, [socket, connected, roomId, role, expert, roomInfo]);
 
-  // ── Socket event listeners ─────────────────────────────────────────────────
   useEffect(() => {
     if (!socket) return;
 
@@ -138,13 +130,11 @@ const ChatRoomPage = () => {
     };
   }, [socket]);
 
-  // ── Send text message ──────────────────────────────────────────────────────
   const sendMessage = useCallback((message) => {
     if (!message.trim() || !socket) return;
     socket.emit('sendMessage', { roomId, sender: role, message });
   }, [socket, roomId, role]);
 
-  // ── Send file message ──────────────────────────────────────────────────────
   const sendFile = useCallback(async (file) => {
     const formData = new FormData();
     formData.append('file', file);
@@ -164,7 +154,6 @@ const ChatRoomPage = () => {
     }
   }, [socket, roomId, role]);
 
-  // ── Typing indicator ───────────────────────────────────────────────────────
   const handleTyping = useCallback(() => {
     socket?.emit('typing', { roomId, sender: role });
     clearTimeout(typingTimeout.current);
@@ -173,7 +162,6 @@ const ChatRoomPage = () => {
     }, 1500);
   }, [socket, roomId, role]);
 
-  // ── Start video call ───────────────────────────────────────────────────────
   const handleStartCall = () => {
     setShowVideo(true);
     webrtc.startCall();
@@ -190,7 +178,6 @@ const ChatRoomPage = () => {
     setIncomingCall(false);
   };
 
-  // ── Loading / Error states ─────────────────────────────────────────────────
   if (loading) return (
     <div className={styles.centerScreen}>
       <span className="spin" style={{ fontSize: '1.5rem', color: 'var(--accent)' }}>◌</span>

@@ -49,7 +49,6 @@ def sync_exams():
 
             seen.add(key)
 
-            # -------- Create new event --------
             if key not in db:
 
                 print("Creating event:", title)
@@ -68,7 +67,6 @@ def sync_exams():
                     "end": end
                 }
 
-            # -------- Update event --------
             else:
 
                 if db[key]["start"] != start:
@@ -86,7 +84,6 @@ def sync_exams():
                     db[key]["start"] = start
                     db[key]["end"] = end
 
-    # -------- Delete removed events --------
     for key in list(db.keys()):
 
         if key not in seen:

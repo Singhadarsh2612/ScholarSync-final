@@ -16,7 +16,6 @@ const connectDB = require('./config/db');
 const app = express();
 const server = http.createServer(app);
 
-// Initialize Socket.IO with CORS
 const io = new Server(server, {
   cors: {
     origin: 'https://scholarsync-chat-frontend-ixje.onrender.com',
@@ -25,10 +24,8 @@ const io = new Server(server, {
   },
 });
 
-// Connect to MongoDB
 connectDB();
 
-// Middleware
 app.use(cors({
   origin: 'https://scholarsync-chat-frontend-ixje.onrender.com',
   credentials: true,
@@ -36,21 +33,17 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Serve uploaded files statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/connect', connectRoutes);   // ScholarSync integration
 app.use('/api/experts', expertRoutes);
 
-// Health check
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-// Initialize Socket.IO handlers
 initSocket(io);
 
 const PORT = process.env.PORT || 5002;

@@ -2,8 +2,6 @@ const { v4: uuidv4 } = require('uuid');
 const Expert = require('../models/Expert');
 const ChatRoom = require('../models/ChatRoom');
 
-// Subject slug → DB subject key mapping
-// Accepts flexible input from ScholarSync
 const SUBJECT_MAP = {
   'computer_networks': 'computer_networks',
   'computer-networks': 'computer_networks',
@@ -42,9 +40,6 @@ const SUBJECT_MAP = {
   'graphs': 'graph',
 };
 
-// @desc    ScholarSync calls this to get a chat room URL
-// @route   GET /api/connect?subject=greedy
-// @access  Public (ScholarSync server-to-server)
 const connectUser = async (req, res) => {
   try {
     const subjectRaw = (req.query.subject || '').toLowerCase().trim();
@@ -61,13 +56,11 @@ const connectUser = async (req, res) => {
       });
     }
 
-    // Find expert for this subject
     const expert = await Expert.findOne({ subject: subjectKey });
     if (!expert) {
       return res.status(404).json({ message: `No expert found for subject: ${subjectKey}` });
     }
 
-    // Create a new unique room for this session
     const roomId = uuidv4();
     const studentId = req.query.studentId || null;
 
@@ -113,7 +106,6 @@ const connectAndRedirect = async (req, res) => {
     let roomId;
 
     if (studentId) {
-      // Check for an existing session first to preserve history
       const existingRoom = await ChatRoom.findOne({
         studentId,
         expertId: expert._id,
@@ -126,7 +118,6 @@ const connectAndRedirect = async (req, res) => {
     }
 
     if (!roomId) {
-      // Create a new unique room right on time
       roomId = uuidv4();
       await ChatRoom.create({
         roomId,
@@ -144,27 +135,21 @@ const connectAndRedirect = async (req, res) => {
   }
 };
 
-// @desc    Get all 10 experts with direct session URLs
-// @route   GET /api/connect/all
-// @access  Public
 const getAllExperts = async (req, res) => {
   try {
     const studentId = req.query.studentId || null;
     const allExperts = await Expert.find({});
     
-    // Find all active rooms for this student
     const activeRooms = studentId 
       ? await ChatRoom.find({ studentId, isActive: true })
       : [];
 
     const result = await Promise.all(allExperts.map(async expert => {
-      // Check if this student already has an active room with this expert
       let existingRoom = activeRooms.find(r => r.expertId.toString() === expert._id.toString());
       
       const clientUrl = 'https://scholarsync-chat-frontend-ixje.onrender.com';
       
       if (!existingRoom && studentId) {
-        // Pre-create the room directly in the DB so we can provide a frontend URL
         const newRoomId = uuidv4();
         existingRoom = await ChatRoom.create({
           roomId: newRoomId,
@@ -174,11 +159,9 @@ const getAllExperts = async (req, res) => {
         });
       }
 
-      // If no studentId was provided, generate a temporary loose room ID
       const finalRoomId = existingRoom ? existingRoom.roomId : uuidv4();
 
       if (!existingRoom && !studentId) {
-        // Create an anonymous room
         await ChatRoom.create({
           roomId: finalRoomId,
           expertId: expert._id,

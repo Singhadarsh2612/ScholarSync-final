@@ -128,7 +128,6 @@ const Analysis = () => {
 
     const panel = { background: SS.panel, border: `1px solid ${SS.border}`, borderRadius: "16px", padding: "24px", boxShadow: "0 8px 32px rgba(16,96,240,.1)", display: "flex", flexDirection: "column" };
     
-    // Derived radar data from the most recent attempt
     const recentAttempt = historyAttempts.length > 0 ? historyAttempts[historyAttempts.length - 1] : null;
     const radarData = recentAttempt ? [
         { subject: 'Coding', A: recentAttempt.Coding, fullMark: 100 },

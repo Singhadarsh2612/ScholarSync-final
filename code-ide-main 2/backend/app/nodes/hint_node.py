@@ -5,7 +5,6 @@ from app.state import InterviewState
 def hint_node(state: InterviewState):
     llm = get_llm("hint")
     
-    # Get and increment hint level
     current_level = state.get("hint_level", 0) + 1
     if current_level > 5:
         current_level = 5

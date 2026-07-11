@@ -10,8 +10,6 @@ def test_region(key, region):
         speech_config = speechsdk.SpeechConfig(subscription=key, region=region)
         speech_config.speech_synthesis_voice_name = "en-US-ChristopherNeural"
         
-        # Try forcing a specific transport or timeout
-        # speech_config.set_property(speechsdk.PropertyId.SpeechServiceConnection_ProxyHost, "none")
         
         synthesizer = speechsdk.SpeechSynthesizer(speech_config=speech_config, audio_config=None)
         result = synthesizer.speak_text_async("Test").get()

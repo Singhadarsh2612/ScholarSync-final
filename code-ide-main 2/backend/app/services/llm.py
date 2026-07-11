@@ -7,7 +7,6 @@ load_dotenv()
 llm=None
 
 def get_llm(agent_type: str):
-    # Azure OpenAI Configuration
     azure_config = {
         "azure_deployment": os.getenv("DEPLOYMENT_NAME", "gpt-4o-mini"),
         "api_version": "2024-02-01",

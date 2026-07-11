@@ -14,7 +14,6 @@ def get_subject_professors():
 
         subjects = res["data"]["subjects"]
 
-        # Return simplified JSON to LLM
         cleaned = []
 
         for s in subjects:

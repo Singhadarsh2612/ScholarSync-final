@@ -14,10 +14,8 @@ def get_db():
     global client, db
     if db is None:
         try:
-            # Singleton pattern: Maintain a single connection pool
             client = MongoClient(MONGO_URI, tlsAllowInvalidCertificates=True)
             db = client[DB_NAME]
-            # Verify connection
             client.admin.command('ping')
             print(f"[MongoDB] Connected successfully to database: {DB_NAME}")
         except Exception as e:

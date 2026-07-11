@@ -21,7 +21,6 @@ export function syncHistory(){
             "history-item-row" +
             (sel.value === opt.value ? " active" : "");
 
-        // thread name
         const item = document.createElement("div");
 
         item.className = "history-item";
@@ -38,7 +37,6 @@ export function syncHistory(){
         };
 
 
-        // delete button
         const del = document.createElement("button");
 
         del.className = "delete-btn";
@@ -65,7 +63,6 @@ export function syncHistory(){
 }
 
 
-// observer
 export function initHistoryObserver(){
 
     const observer = new MutationObserver(syncHistory);

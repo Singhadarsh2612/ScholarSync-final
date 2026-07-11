@@ -8,11 +8,6 @@ that postprocess.js knows how to render.
 
 import json
 
-
-# ══════════════════════════════════════════════════════════════════════════════
-# INDIVIDUAL BUILDERS
-# ══════════════════════════════════════════════════════════════════════════════
-
 def build_ui_assignments(data) -> str:
     """Convert raw assignments list → ```ui_assignments block."""
     if not data or (isinstance(data, list) and data and "error" in data[0]):
@@ -105,11 +100,7 @@ def build_ui_deadlines(data) -> str:
     return "\n".join(lines)
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# DISPATCHER
-# ══════════════════════════════════════════════════════════════════════════════
 
-# Maps ui_requirement.type → (builder_fn, corresponding raw tool name)
 _BUILDER_MAP: dict = {
     "assignments":       (build_ui_assignments,       "get_assignments_raw"),
     "materials":         (build_ui_materials,          "get_materials_raw"),

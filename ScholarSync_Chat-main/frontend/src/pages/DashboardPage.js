@@ -54,11 +54,9 @@ const DashboardPage = () => {
 
   useEffect(() => { fetchRooms(); }, [fetchRooms]);
 
-  // Listen for new user waiting events
   useEffect(() => {
     if (!socket || !expert) return;
 
-    // Join personal expert channel for notifications
     socket.emit('joinExpertNotifications', { expertId: expert._id });
 
     socket.on('userWaiting', ({ roomId, message }) => {
@@ -66,7 +64,6 @@ const DashboardPage = () => {
         { roomId, message, id: Date.now() },
         ...prev.slice(0, 4), // keep last 5
       ]);
-      // Refresh rooms list
       fetchRooms();
     });
 

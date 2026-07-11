@@ -10,9 +10,6 @@ All agent/swarm files import from here — no prompt strings inline.
   KEY 3 (llm_4o):     PLANNER_SYSTEM
 """
 
-# ══════════════════════════════════════════════════════════════════════════════
-# SHARED TOOL LIST (injected into prompts that need it)
-# ══════════════════════════════════════════════════════════════════════════════
 
 _TOOL_LIST = """
 DATA TOOLS (return structured data):
@@ -60,9 +57,6 @@ If multiple data tools are used, use the FIRST one's UI type.
 """
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# KEY 1 — llm_mini_1
-# ══════════════════════════════════════════════════════════════════════════════
 
 COMPLEXITY_ANALYZER_SYSTEM = """\
 You are the Query Complexity Analyzer for ScholarSync.
@@ -121,9 +115,6 @@ Output format — STRICTLY follow UI REQUIREMENT MAPPING above for ui_requiremen
 }}"""
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# KEY 2 — llm_mini_2
-# ══════════════════════════════════════════════════════════════════════════════
 
 EXPLORER_TOOL_HEAVY_SYSTEM = f"""\
 You are the Tool-Heavy Explorer for ScholarSync's swarm pipeline.
@@ -297,9 +288,6 @@ ALWAYS APPROVE when:
 Be strict on accuracy and completeness. Be concise."""
 
 
-# ══════════════════════════════════════════════════════════════════════════════
-# KEY 3 — llm_4o (Planner ONLY)
-# ══════════════════════════════════════════════════════════════════════════════
 
 PLANNER_SYSTEM = f"""\
 You are the Master Planner for ScholarSync — the central reasoning brain.

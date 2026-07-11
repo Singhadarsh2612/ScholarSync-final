@@ -2,7 +2,6 @@ import { API_BASE, getThreadID, setThreadID } from "./config.js";
 import { addMessage } from "./ui.js";
 
 
-// Load chat history
 export async function loadHistory(){
 
     const thread_id = getThreadID();
@@ -45,7 +44,6 @@ export async function loadHistory(){
 
 
 
-// Load threads into dropdown AND sidebar
 export async function loadThreads(){
 
     const response = await fetch(`${API_BASE}/threads`);
@@ -71,7 +69,6 @@ export async function loadThreads(){
 
     entries.forEach(([id, name]) => {
 
-        // dropdown option
         const option = document.createElement("option");
 
         option.value = id;
@@ -80,7 +77,6 @@ export async function loadThreads(){
         dropdown.appendChild(option);
 
 
-        // sidebar item
         const item = document.createElement("div");
 
         item.className = "history-item";
@@ -140,7 +136,6 @@ export async function loadThreads(){
 
 
 
-// Delete specific thread
 export async function deleteThread(thread_id){
 
     if(!thread_id) return;
@@ -165,7 +160,6 @@ export async function deleteThread(thread_id){
     });
 
 
-    // clear chat if current thread deleted
     if(getThreadID() === thread_id){
 
         document.getElementById("chat-box").innerHTML = "";
@@ -175,14 +169,12 @@ export async function deleteThread(thread_id){
     }
 
 
-    // reload sidebar
     await loadThreads();
 
 }
 
 
 
-// Delete current thread shortcut
 export async function deleteCurrentThread(){
 
     const thread_id = getThreadID();

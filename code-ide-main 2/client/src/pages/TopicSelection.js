@@ -43,7 +43,6 @@ const TopicSelection = () => {
   const handleSelectTopic = async (topic) => {
     setSelected(topic.slug);
 
-    // ── Step 1: Unlock audio NOW while user gesture is active ──
     try {
       globalAudioContext.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
       await globalAudioContext.play().catch(() => {});
@@ -55,7 +54,6 @@ const TopicSelection = () => {
       if (questions.length > 0) {
         const problemId = questions[0].id;
 
-        // ── Step 2: Pre-fetch welcome audio before navigation ──
         try {
           const welcomeRes = await axios.post(`${API_URL}/ai/welcome`, {
             code: "", problemId: problemId, session_id: sessionId

@@ -26,8 +26,6 @@ class CVParser:
             chunk_overlap=50
         )
 
-        # Free local embeddings via HuggingFace — no API key needed
-        # Replace HuggingFaceEmbeddings with this
         self.embeddings = AzureOpenAIEmbeddings(
             azure_deployment=env.get("AZURE_EMBEDDING_DEPLOYMENT"),   # text-embedding-3-small
             azure_endpoint=env.get("AZURE_EMBEDDING_ENDPOINT"),       # https://aiserives.openai.azure.com/
@@ -35,7 +33,6 @@ class CVParser:
             api_version=env.get("AZURE_EMBEDDING_API_VERSION"),       # 2024-02-01
         )
 
-        # Azure OpenAI LLM (kept as is)
         self.llm = AzureChatOpenAI(
             azure_deployment=os.getenv("DEPLOYMENT_NAME", "gpt-4o-mini"),
             api_version="2024-02-01",
@@ -43,7 +40,6 @@ class CVParser:
             api_key=os.getenv("AZURE_OPENAI_API_KEY"),
         )
 
-        # Load existing FAISS index if it exists, else set to None
         if os.path.exists(FAISS_INDEX_PATH):
             print(f"Loading existing FAISS index from '{FAISS_INDEX_PATH}'...")
             self.vector_store = FAISS.load_local(
@@ -155,28 +151,23 @@ class CVParser:
             with open(file_path) as f:
                 text = f.read()
 
-        # Structured parse via LLM
         data = self.structured_resume(text)
 
-        # Chunk and embed into FAISS
         chunks = self.splitter.split_text(text)
         metadatas = [{"source": file_path, "chunk": i} for i in range(len(chunks))]
 
         if self.vector_store is None:
-            # First time — create the index
             self.vector_store = FAISS.from_texts(
                 texts=chunks,
                 embedding=self.embeddings,
                 metadatas=metadatas
             )
         else:
-            # Index exists — add to it
             self.vector_store.add_texts(
                 texts=chunks,
                 metadatas=metadatas
             )
 
-        # Persist to disk
         self.vector_store.save_local(FAISS_INDEX_PATH)
         print(f"{len(chunks)} chunks stored in FAISS index at '{FAISS_INDEX_PATH}'")
 
@@ -211,9 +202,6 @@ if __name__ == "__main__":
 
     cv = parser.parse_cv(r"C:\Users\Aditya Pratap Singh\Desktop\check_MS\sde_aditya_pratap_singh.pdf")
 
-    # with open("parsed_cv.json", "w", encoding="utf-8") as f:
-    #     json.dump(cv, f, indent=4)
 
-    # print("Parsed CV saved to parsed_cv.json")
 
     parser.search("How would u rate him on 10 for his skills ?")

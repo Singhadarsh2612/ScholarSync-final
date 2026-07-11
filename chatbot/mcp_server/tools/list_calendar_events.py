@@ -1,3 +1,4 @@
+# pyrefly: ignore [missing-import]
 from ..calendar_auth import get_calendar_service, CALENDAR_ID
 
 
@@ -43,4 +44,4 @@ Start: {start_time}
         return {"result": output}
 
     except Exception as e:
-        return {"result": f"Calendar error: {str(e)}"}
+        return {"result": f"Calendar error: {str(e)}"}

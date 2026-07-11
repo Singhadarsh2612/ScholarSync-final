@@ -38,17 +38,14 @@ Keep it short.
 
     question_text = response.content
 
-    # generate speech
     try:
         audio_base64 = text_to_speech_base64(question_text)
     except Exception as e:
         print(f"Speech Error in interviewer_node: {e}", flush=True)
         audio_base64 = None
 
-    # update state
     state["messages"].append(response)
 
-    # save to cosmos
     save_session(state)
 
     return {

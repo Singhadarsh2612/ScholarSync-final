@@ -7,7 +7,6 @@
  */
 export function postProcessBotDiv(div, rawText) {
 
-    // ── ui_materials ──
     const matRegex = /```ui_materials\s+([\s\S]*?)```/;
     const matchMat = rawText.match(matRegex);
     if (matchMat) {
@@ -54,7 +53,6 @@ export function postProcessBotDiv(div, rawText) {
         } catch(e) { console.error("Failed to parse materials JSON", e); }
     }
 
-    // ── ui_assignments ──
     const asgRegex = /```ui_assignments\s+([\s\S]*?)```/;
     const matchAsg = rawText.match(asgRegex);
     if (matchAsg) {
@@ -106,7 +104,6 @@ export function postProcessBotDiv(div, rawText) {
         } catch(e) { console.error("Failed to parse assignments JSON", e); }
     }
 
-    // ── ui_interview_confirm ──
     const ivRegex = /```ui_interview_confirm\s+([\s\S]*?)```/;
     const matchIv = rawText.match(ivRegex);
     if (matchIv) {

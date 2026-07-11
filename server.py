@@ -11,17 +11,12 @@ from fastapi.responses import StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from analysis_api import get_analysis_report
-# Import chatbot services
 from chatbot import chat_stream, get_all_threads, delete_thread, init_chatbot
 from chatbot import memory
 from typing import List,Optional
 from assignment_solver import solve_assignment
 from fastapi.responses import FileResponse
 
-# ---------------------------
-# In-memory auth state
-# Resets every time the server restarts — no database needed.
-# ---------------------------
 
 import os
 
@@ -30,32 +25,15 @@ _AUTH_PASSWORD = os.getenv("ADMIN_PASSWORD", "scholarsync26")
 _session_authenticated = False   # single shared flag
 
 
-# ---------------------------
-# Lifespan (startup/shutdown)
-# ---------------------------
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
 
-    # Initialize chatbot memory + graph
     saver_cm = await init_chatbot()
-
     yield
-
-    # Cleanup DB connection
     await saver_cm.__aexit__(None, None, None)
 
-
-# ---------------------------
-# FastAPI app
-# ---------------------------
-
 app = FastAPI(lifespan=lifespan)
-
-
-# ---------------------------
-# CORS
-# ---------------------------
 
 app.add_middleware(
     CORSMiddleware,
@@ -65,38 +43,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
-# ---------------------------
-# Request models
-# ---------------------------
-
 class ChatRequest(BaseModel):
     message: str
     thread_id: str
 
-
 class HistoryRequest(BaseModel):
     thread_id: str
 
-
 class DeleteThreadRequest(BaseModel):
     thread_id: str
-
 
 class LoginRequest(BaseModel):
     email: str
     password: str
 
-
-# ---------------------------
-# Auth endpoints
-# ---------------------------
-
 @app.get("/auth/status")
 def auth_status():
     """Returns whether the user has already authenticated this server session."""
     return {"authenticated": _session_authenticated}
-
 
 @app.post("/auth/login")
 def auth_login(req: LoginRequest):
@@ -108,9 +72,6 @@ def auth_login(req: LoginRequest):
     return {"success": False, "error": "Invalid email or password."}
 
 
-# ---------------------------
-# Page routes
-# ---------------------------
 
 @app.get("/")
 def serve_ui():
@@ -142,9 +103,6 @@ def serve_logo():
 def serve_favicon():
     return FileResponse("logo.png", media_type="image/png")
 
-# ---------------------------
-# Streaming chat endpoint
-# ---------------------------
 
 @app.post("/chat-stream")
 async def chat_stream_endpoint(req: ChatRequest):
@@ -167,9 +125,6 @@ async def chat_stream_endpoint(req: ChatRequest):
     )
 
 
-# ---------------------------
-# Get conversation history
-# ---------------------------
 
 @app.post("/history")
 async def get_history_endpoint(req: HistoryRequest):
@@ -201,9 +156,6 @@ async def get_history_endpoint(req: HistoryRequest):
     }
 
 
-# ---------------------------
-# Get all threads
-# ---------------------------
 
 @app.get("/threads")
 async def threads_endpoint():
@@ -215,9 +167,6 @@ async def threads_endpoint():
     }
 
 
-# ---------------------------
-# Delete thread
-# ---------------------------
 
 @app.delete("/thread")
 async def delete_thread_endpoint(req: DeleteThreadRequest):

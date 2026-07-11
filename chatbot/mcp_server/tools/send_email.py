@@ -18,9 +18,7 @@ def send_email(data):
     msg["To"] = to
     msg["Subject"] = subject
     import markdown
-    # Convert markdown body to HTML to preserve formatting and list structures
     html_body = markdown.markdown(body, extensions=['extra', 'nl2br'])
-    # Attach body as HTML
     msg.attach(MIMEText(html_body, "html"))
 
     try:

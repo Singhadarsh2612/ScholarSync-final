@@ -22,7 +22,6 @@ from app.proctoring.router import router as proctoring_router
 
 app.include_router(proctoring_router, prefix="/api/ai", tags=["proctoring"])
 
-# Setup CORS (allow React dev server on port 3000) ----
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -31,29 +30,20 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ---- LangGraph pipeline (existing) ----
 graph = build_graph(checkpointer=None)
 
-# ---- In-memory resume parse cache (MD5 hash → parsed data) ----
 _resume_cache: dict = {}
 
 
-# =============================================================
-# 1. GET /problem/{problem_id}  — serve problem (hide solution)
-# =============================================================
 @app.get("/api/problem/{problem_id}")
 def get_problem(problem_id: int):
     problem = problems.get(problem_id)
     if not problem:
         raise HTTPException(status_code=404, detail="Problem not found")
 
-    # Return everything except the solution
     return {k: v for k, v in problem.items() if k != "solution"}
 
 
-# =============================================================
-# 1b. GET /api/questions/topics  — all unique topics with metadata
-# =============================================================
 @app.get("/api/questions/topics")
 def get_topics():
     topics_list = []
@@ -74,9 +64,6 @@ def get_topics():
     return {"topics": topics_list}
 
 
-# =============================================================
-# 1c. GET /api/questions/{topic}  — problems for a specific topic
-# =============================================================
 @app.get("/api/questions/{topic}")
 def get_questions_by_topic(topic: str):
     slug = topic.lower().replace(" ", "-")
@@ -85,16 +72,12 @@ def get_questions_by_topic(topic: str):
         tags = p.get("tags", {})
         topic_slugs = [t.lower().replace(" ", "-") for t in tags.get("topics", [])]
         if slug in topic_slugs:
-            # Return problem without solution
             matched.append({k: v for k, v in p.items() if k != "solution"})
     if not matched:
         raise HTTPException(status_code=404, detail=f"No questions found for topic: {topic}")
     return {"topic": slug, "questions": matched, "count": len(matched)}
 
 
-# =============================================================
-# 1d. GET /api/topic/{topic_name}  — topic summary for LLM
-# =============================================================
 @app.get("/api/topic/{topic_name}")
 def get_topic_info(topic_name: str):
     slug = topic_name.lower().replace(" ", "-")
@@ -107,7 +90,6 @@ def get_topic_info(topic_name: str):
             doc["_id"] = str(doc["_id"])
             return doc
             
-    # Mock fallback if document hasn't been created yet
     prob_title = slug.replace("-", " ").title()
     return {
         "question_tag": slug,
@@ -123,9 +105,6 @@ def get_topic_info(topic_name: str):
         "improvement_trend": "Not Enough Data"
     }
 
-# =============================================================
-# 1e. GET /api/interview_routing — 5 specific LLM chatbot endpoints
-# =============================================================
 @app.get("/api/interview_routing")
 def get_interview_routing():
     try:
@@ -196,27 +175,21 @@ def get_interview_routing():
 
 
 
-# =============================================================
-# 2. POST /run  — compile & run C++ code
-# =============================================================
 @app.post("/api/run")
 def run_code(payload: RunCodePayload):
     unique_id = uuid.uuid4().hex[:8]
 
-    # Use a temp directory so files don't litter the project
     tmp_dir = tempfile.gettempdir()
     cpp_path = os.path.join(tmp_dir, f"temp_{unique_id}.cpp")
     exe_path = os.path.join(tmp_dir, f"temp_{unique_id}.exe")
     input_path = os.path.join(tmp_dir, f"input_{unique_id}.txt")
 
     try:
-        # Write source and input files
         with open(cpp_path, "w") as f:
             f.write(payload.code)
         with open(input_path, "w") as f:
             f.write(payload.input)
 
-        # Check if the code looks like Python
         if "def " in payload.code or "print(" in payload.code or "import " in payload.code:
             py_path = os.path.join(tmp_dir, f"temp_{unique_id}.py")
             with open(py_path, "w") as f:
@@ -235,7 +208,6 @@ def run_code(payload: RunCodePayload):
             return {"success": True, "output": run_result.stdout}
             
         else:
-            # Continue with C++ compilation
             compile_result = subprocess.run(
                 ["g++", cpp_path, "-o", exe_path],
                 capture_output=True, text=True, timeout=15
@@ -244,7 +216,6 @@ def run_code(payload: RunCodePayload):
             if compile_result.returncode != 0:
                 return {"success": False, "output": compile_result.stderr}
 
-            # Run with input
             with open(input_path, "r") as inp:
                 run_result = subprocess.run(
                     [exe_path],
@@ -264,7 +235,6 @@ def run_code(payload: RunCodePayload):
     except Exception as e:
         return {"success": False, "output": str(e)}
     finally:
-        # Cleanup temp files
         for path in [cpp_path, exe_path, input_path]:
             if os.path.exists(path):
                 try:
@@ -273,16 +243,11 @@ def run_code(payload: RunCodePayload):
                     pass
 
 
-# =============================================================
-# 3. POST /ai/parse_resume  — parse uploaded CV
-# =============================================================
 @app.post("/api/ai/parse_resume")
 async def parse_resume(file: UploadFile = File(...), session_id: str = None, user_id: str = None):
-    # Read bytes once so we can hash them for caching
     file_bytes = await file.read()
     file_hash = hashlib.md5(file_bytes).hexdigest()
 
-    # ── Cache hit: return previous result immediately ──────────
     cache_dir = os.path.join(os.path.dirname(__file__), "resume_cache")
     os.makedirs(cache_dir, exist_ok=True)
     cache_file = os.path.join(cache_dir, f"cache_{file_hash}.json")
@@ -303,7 +268,6 @@ async def parse_resume(file: UploadFile = File(...), session_id: str = None, use
                 save_session(state)
         return {"success": True, "data": cached_data, "cached": True}
 
-    # ── Cache miss: parse and store ───────────────────────────
     unique_id = uuid.uuid4().hex[:8]
     tmp_path = os.path.join(tempfile.gettempdir(), f"resume_{unique_id}_{file.filename}")
     try:
@@ -313,7 +277,6 @@ async def parse_resume(file: UploadFile = File(...), session_id: str = None, use
         parser = CVParser()
         data = parser.parse_cv(tmp_path)
 
-        # Store in cache file
         with open(cache_file, "w") as f:
             import json
             json.dump(data, f)
@@ -337,9 +300,6 @@ async def parse_resume(file: UploadFile = File(...), session_id: str = None, use
             os.remove(tmp_path)
 
 
-# =============================================================
-# 4. POST /ai/welcome  — initial greeting
-# =============================================================
 @app.post("/api/ai/welcome")
 def ai_welcome(payload: AIRequestPayload):
     problem = problems.get(payload.problemId)
@@ -361,9 +321,6 @@ def ai_welcome(payload: AIRequestPayload):
     }
 
 
-# =============================================================
-# 5. POST /ai/chat — interactive chat (MUST be before /ai/{ai_type})
-# =============================================================
 @app.post("/api/ai/chat")
 def ai_chat(payload: ChatRequestPayload):
     from langchain_core.messages import AIMessage as LCAIMessage
@@ -378,7 +335,6 @@ def ai_chat(payload: ChatRequestPayload):
         if sessions:
             session_data = sessions[0]
 
-    # ---- Detect if this is a general CS concept question ----
     concept_keywords = [
         "what is", "what are", "explain", "how does", "how do",
         "difference between", "define", "what's", "can you explain",
@@ -412,10 +368,8 @@ def ai_chat(payload: ChatRequestPayload):
     try:
         llm = get_llm("chat")
 
-        # Start with system message
         messages = [SystemMessage(content=system_role)]
 
-        # For problem-specific questions, add background context + acknowledgment
         if not is_concept_question:
             background_context = (
                 f"Problem the candidate is solving: {problem['description']}\n"
@@ -425,14 +379,12 @@ def ai_chat(payload: ChatRequestPayload):
             messages.append(HumanMessage(content=background_context))
             messages.append(LCAIMessage(content="Understood, I have the context. I'm ready to help!"))
 
-        # Replay conversation history for multi-turn memory
         for turn in payload.history:
             if turn.role == "user":
                 messages.append(HumanMessage(content=turn.content))
             elif turn.role == "assistant":
                 messages.append(LCAIMessage(content=turn.content))
 
-        # Add the new user message
         messages.append(HumanMessage(content=payload.message))
 
         response = llm.invoke(messages)
@@ -450,16 +402,12 @@ def ai_chat(payload: ChatRequestPayload):
         return {"feedback": "I'm sorry, I'm having trouble processing that.", "audio": None}
 
 
-# =============================================================
-# 6. POST /ai/{ai_type}  — AI hints / periodic / evaluation
-# =============================================================
 @app.post("/api/ai/{ai_type}")
 def ai_endpoint(ai_type: str, payload: AIRequestPayload):
     problem = problems.get(payload.problemId)
     if not problem:
         raise HTTPException(status_code=404, detail="Problem not found")
 
-    # Load session state if session_id is provided
     from app.services.session_store import load_session, save_session
     session_data = {}
     if payload.session_id:
@@ -467,7 +415,6 @@ def ai_endpoint(ai_type: str, payload: AIRequestPayload):
         if sessions:
             session_data = sessions[0]
 
-    # Choose system prompt based on type
     if ai_type == "periodic":
         system_role = (
             "You are a friendly technical and consise interviewer observing the candidate. "
@@ -506,7 +453,6 @@ def ai_endpoint(ai_type: str, payload: AIRequestPayload):
             "Replace X with a number from 0 to 100. Coding is correctness, Communication is clarity/naming, Problem Solving is logic/edge-cases, Efficiency is algorithmic speed."
         )
 
-    # Build prompt with context
     context = (
         f"Problem: {problem['description']}\n"
         f"User Code: {payload.code}\n"
@@ -520,7 +466,6 @@ def ai_endpoint(ai_type: str, payload: AIRequestPayload):
             SystemMessage(content=f"{system_role}\n\nInstruction: Provide a concise response in plain text (1-3 sentences max)."),
             HumanMessage(content=context)
         ])
-        # Clean up text and extract score if periodic
         final_feedback = response.content
         extracted_score = 50
         if ai_type == "periodic":
@@ -530,7 +475,6 @@ def ai_endpoint(ai_type: str, payload: AIRequestPayload):
                 extracted_score = int(match.group(1))
                 final_feedback = re.sub(r"(?i)\[?SCORE\D*\d+\]?", "", final_feedback).strip()
             
-            # Save periodic progress
             if payload.session_id:
                 scores = session_data.get("progress_scores", [])
                 scores.append({"minute": len(scores) + 1, "score": extracted_score})
@@ -545,12 +489,10 @@ def ai_endpoint(ai_type: str, payload: AIRequestPayload):
                 }
                 save_session(state_to_save)
 
-        # Update session data if needed (specifically for hints)
         if ai_type == "hint" and payload.session_id:
             session_data["hint_level"] = session_data.get("hint_level", 0) + 1
             if session_data["hint_level"] > 5: session_data["hint_level"] = 5
             
-            # Create a minimal state to save
             state_to_save = {
                 "session_id": payload.session_id,
                 "user_id": payload.user_id,
@@ -582,16 +524,13 @@ def ai_endpoint(ai_type: str, payload: AIRequestPayload):
             m_eff = re.search(r"(?i)EFFICIENCY\s*SCORE\D*(\d+)", final_feedback)
             if m_eff: eff_score = int(m_eff.group(1))
             
-            # Clean text
             final_feedback = re.sub(r"(?i)\[?CODING\s*SCORE\D*\d+\]?", "", final_feedback)
             final_feedback = re.sub(r"(?i)\[?COMMUNICATION\s*SCORE\D*\d+\]?", "", final_feedback)
             final_feedback = re.sub(r"(?i)\[?PROBLEM\s*SOLVING\s*SCORE\D*\d+\]?", "", final_feedback)
             final_feedback = re.sub(r"(?i)\[?EFFICIENCY\s*SCORE\D*\d+\]?", "", final_feedback).strip()
             
-            # Calculate overall average
             overall_score = sum([coding_score, comm_score, ps_score, eff_score]) // 4
             
-            # Append to history array so that recurring sessions accumulate data
             import time
             eval_history = session_data.get("eval_history", [])
             attempt = {
@@ -625,7 +564,6 @@ def ai_endpoint(ai_type: str, payload: AIRequestPayload):
                 "eval_history": eval_history
             }
             save_session(state_to_save)
-        # Generate voice
         from app.services.speech_service import text_to_speech_base64
         audio_base64 = None
         try:
@@ -644,9 +582,6 @@ def ai_endpoint(ai_type: str, payload: AIRequestPayload):
 
 
 
-# =============================================================
-# 6. POST /ai/stt — speech to text
-# =============================================================
 @app.post("/api/ai/stt")
 async def speech_to_text_endpoint(file: UploadFile = File(...)):
    
@@ -678,9 +613,6 @@ async def speech_to_text_endpoint(file: UploadFile = File(...)):
             os.remove(tmp_path)
 
 
-# =============================================================
-# 7. POST /ai/warning_tts — speak warning out loud
-# =============================================================
 @app.post("/api/ai/warning_tts")
 def ai_warning_tts(payload: dict):
     from app.services.speech_service import text_to_speech_base64
@@ -724,11 +656,9 @@ def update_code(payload: CodeUpdatePayload):
 
     result = graph.invoke(state)
     
-    # Ensure the final state is saved back to Cosmos DB
     from app.services.session_store import save_session
     save_session(result)
     
-    # Serialize LangChain objects to simple dictionaries for the frontend response
     serializable_messages = []
     for msg in result.get("messages", []):
         if hasattr(msg, "content"):
@@ -763,9 +693,6 @@ def get_session_analysis(session_id: str):
     }
 
 
-# =============================================================
-# 8. GET /candidate/history  — Personalized performance tracking
-# =============================================================
 @app.get("/api/candidate/history")
 def get_candidate_history(user_id: str):
     from app.services.session_store import load_candidate_history

@@ -1,7 +1,4 @@
-# ──────────────────────────────────────────────
-# ScholarSync — Single-Container Multi-Service
-# Backend (FastAPI) on :8000  |  MCP Server on :8002
-# ──────────────────────────────────────────────
+
 FROM python:3.12-slim
 
 # Prevent Python from writing .pyc / buffering stdout

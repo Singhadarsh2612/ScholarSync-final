@@ -10,7 +10,6 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(localStorage.getItem('expertToken'));
   const [loading, setLoading] = useState(true);
 
-  // Set axios default auth header
   useEffect(() => {
     if (token) {
       axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
@@ -19,7 +18,6 @@ export const AuthProvider = ({ children }) => {
     }
   }, [token]);
 
-  // Fetch current expert on mount if token exists
   useEffect(() => {
     const fetchMe = async () => {
       if (!token) { setLoading(false); return; }
@@ -27,7 +25,6 @@ export const AuthProvider = ({ children }) => {
         const { data } = await axios.get(`${API_URL}/api/auth/me`);
         setExpert(data);
       } catch {
-        // Token invalid — clear it
         localStorage.removeItem('expertToken');
         setToken(null);
         setExpert(null);

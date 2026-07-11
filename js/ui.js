@@ -8,7 +8,6 @@ export function addMessage(sender, text){
 
     div.className = sender;
     if (sender === "bot") {
-        // Try to render rich UI cards first; fall back to markdown
         if (!postProcessBotDiv(div, text)) {
             div.innerHTML = marked.parse(text);
         }

@@ -5,9 +5,6 @@ import webbrowser
 from assignment_solver import solve_assignment
 from analysis_api import fetch_student_data
 
-# ---------------------------------------------------------------------------
-# Interview Routing – fetched ONCE at module load
-# ---------------------------------------------------------------------------
 INTERVIEW_ROUTING_API = "https://scholarsync-aps-backend.azurewebsites.net/api/interview_routing"
 FRONTEND_BASE          = "https://scholarsync-aps-client.azurewebsites.net"
 
@@ -191,16 +188,12 @@ def get_deadlines_tool() -> str:
                     continue
 
                 start_time_str = details.get("startTime")
-                # Parse ISO timestamp
                 try:
-                    # Remove Z for parsing
                     clean_str = start_time_str.replace("Z", "")
-                    # Strip milliseconds if any (e.g. .000)
                     if "." in clean_str:
                         clean_str = clean_str.split(".")[0]
                     exam_dt = datetime.strptime(clean_str, "%Y-%m-%dT%H:%M:%S")
                     
-                    # Only include upcoming (future) items
                     if exam_dt >= now:
                         days_until = (exam_dt - now).days + 1
                         result.append({
@@ -214,7 +207,6 @@ def get_deadlines_tool() -> str:
                 except Exception:
                     pass
 
-        # Sort nearest deadline first
         result.sort(key=lambda x: x.get("days_until_due") if isinstance(x.get("days_until_due"), (int, float)) else 9999)
         return json.dumps(result, indent=2)
     except Exception as e:
@@ -277,9 +269,6 @@ def get_exams_tool() -> str:
         return f"Error fetching exam schedule: {str(e)}"
 
 
-# ---------------------------------------------------------------------------
-# Interview Tools
-# ---------------------------------------------------------------------------
 
 @tool
 def get_interview_info_tool() -> str:

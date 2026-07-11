@@ -50,7 +50,6 @@ def fetch_student_data():
 
 def generate_analysis(data):
 
-    # Initialize LLM inside function
     llm = AzureChatOpenAI(
         azure_deployment=os.getenv("DEPLOYMENT_NAME", "gpt-4o-mini"),
         temperature=0,

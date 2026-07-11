@@ -1,5 +1,3 @@
-// Set to your deployed backend URL, or leave empty for same-origin (relative paths)
-// e.g. "https://your-app.azurewebsites.net" or ""
 export const API_BASE = "";
 
 export let thread_id = localStorage.getItem("thread_id");

@@ -39,9 +39,6 @@ from chatbot.prompts import (
 )
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# HELPERS
-# ─────────────────────────────────────────────────────────────────────────────
 
 def _last_human(state: dict) -> str:
     for m in reversed(state.get("messages", [])):
@@ -50,7 +47,6 @@ def _last_human(state: dict) -> str:
     return ""
 
 
-# ── Email masking (prevents Azure content-filter on raw email addresses) ───────
 
 _EMAIL_RE = re.compile(r"[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}")
 
@@ -64,7 +60,6 @@ def _mask_emails(text: str) -> tuple[str, dict[str, str]]:
     def replacer(m: re.Match) -> str:
         nonlocal counter
         email = m.group(0)
-        # reuse same placeholder if we've seen this address before
         for k, v in mapping.items():
             if v == email:
                 return k
@@ -141,7 +136,6 @@ def _result_to_str(result: Any) -> str:
     return str(result)
 
 
-# ── Confirmation detection ─────────────────────────────────────────────────
 _CONFIRM_PHRASES = {
     "yes", "send", "send it", "yes send it", "go ahead", "ok", "okay",
     "confirm", "proceed", "sure", "yep", "yeah", "do it", "go", "approved",
@@ -174,7 +168,6 @@ def _parse_email_draft(text: str) -> dict:
 
         to_m      = re.search(r"^TO:\s*(.+)$",      block, re.MULTILINE | re.IGNORECASE)
         subject_m = re.search(r"^SUBJECT:\s*(.+)$", block, re.MULTILINE | re.IGNORECASE)
-        # Body is everything after the BODY: line
         body_m    = re.search(r"^BODY:\s*\n([\s\S]+)$", block, re.MULTILINE | re.IGNORECASE)
 
         if to_m and subject_m and body_m:
@@ -184,7 +177,6 @@ def _parse_email_draft(text: str) -> dict:
                 "body":    body_m.group(1).strip(),
             }
 
-        # Fallback: maybe LLM forgot BODY: header — grab everything after SUBJECT: line
         if to_m and subject_m:
             subject_end = subject_m.end()
             leftover = block[subject_end:].strip()
@@ -204,9 +196,6 @@ def _parse_interview_ready(text: str) -> str:
     return m.group(1).strip() if m else ""
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 1. COMPLEXITY ANALYZER  (llm_mini_1)
-# ─────────────────────────────────────────────────────────────────────────────
 
 async def complexity_analyzer_node(state: dict) -> dict:
     query         = _last_human(state)
@@ -227,13 +216,11 @@ async def complexity_analyzer_node(state: dict) -> dict:
         "critic_feedback":   "",
     }
 
-    # ── Bypass LLM for confirmation turns ─────────────────────────────────────
     if _is_confirmation(query) and (pending_email or pending_iv):
         return {
             "complexity":        "simple",
             "complexity_reason": "Confirmation of pending action — LLM bypassed",
             **base_reset,
-            # Keep pending fields so SimpleRetriever can consume them
             "pending_email":           pending_email,
             "pending_interview_topic": pending_iv,
         }
@@ -250,22 +237,17 @@ async def complexity_analyzer_node(state: dict) -> dict:
         "complexity":              complexity,
         "complexity_reason":       parsed.get("reason", ""),
         **base_reset,
-        # Clear pending fields on fresh queries (not on confirmations)
         "pending_email":           {},
         "pending_interview_topic": "",
     }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 2. SIMPLE RETRIEVER  (llm_mini_1)
-# ─────────────────────────────────────────────────────────────────────────────
 
 async def simple_retriever_node(state: dict) -> dict:
     query         = _last_human(state)
     pending_email = state.get("pending_email") or {}
     pending_iv    = state.get("pending_interview_topic") or ""
 
-    # ── FAST PATH: pending email confirmation ─────────────────────────────────
     if pending_email and _is_confirmation(query):
         return {
             "simple_tool_call": {"tool": "send_email"},
@@ -280,7 +262,6 @@ async def simple_retriever_node(state: dict) -> dict:
             "pending_email":  {},  # clear after consuming
         }
 
-    # ── FAST PATH: pending interview confirmation ─────────────────────────────
     if pending_iv and _is_confirmation(query):
         return {
             "simple_tool_call": {"tool": "open_interview_in_browser"},
@@ -295,7 +276,6 @@ async def simple_retriever_node(state: dict) -> dict:
             "pending_interview_topic": "",  # clear after consuming
         }
 
-    # ── NORMAL PATH: ask LLM ─────────────────────────────────────────────────
     history_lines = []
     for m in state.get("messages", [])[-6:]:
         role = getattr(m, "type", "")
@@ -312,7 +292,6 @@ async def simple_retriever_node(state: dict) -> dict:
     parameters = parsed.get("parameters") or {}
     ui_req     = parsed.get("ui_requirement", {"required": False, "type": "none"})
 
-    # Unmask any email placeholders that landed in parameters (e.g. send_email.to)
     if em_map:
         for k, v in parameters.items():
             if isinstance(v, str):
@@ -338,9 +317,6 @@ async def simple_retriever_node(state: dict) -> dict:
     }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 3. PLANNER  (llm_4o — GPT-4o only)
-# ─────────────────────────────────────────────────────────────────────────────
 
 async def planner_node(state: dict) -> dict:
     query = _last_human(state)
@@ -352,7 +328,6 @@ async def planner_node(state: dict) -> dict:
     steps  = parsed.get("steps", [])
     ui_req = parsed.get("ui_requirement", {"required": False, "type": "none"})
 
-    # Unmask emails in any step parameters the planner may have extracted
     for s in steps:
         params = s.get("parameters") or {}
         for k, v in params.items():
@@ -368,9 +343,6 @@ async def planner_node(state: dict) -> dict:
     }
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 4. EXPLORER AGENTS  (llm_mini_2)
-# ─────────────────────────────────────────────────────────────────────────────
 
 async def _run_explorer(state: dict, system_prompt: str, name: str) -> dict:
     query         = _last_human(state)
@@ -403,9 +375,6 @@ async def run_balanced_explorer(state: dict) -> dict:
     return {"explorer_outputs": existing + [out]}
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 5. FITNESS EVALUATOR  (llm_mini_2)
-# ─────────────────────────────────────────────────────────────────────────────
 
 async def fitness_evaluator_node(state: dict) -> dict:
     query   = _last_human(state)
@@ -434,15 +403,11 @@ async def fitness_evaluator_node(state: dict) -> dict:
     return {"execution_plan": plan}
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 6. EXECUTOR NODE  (pure Python — NO LLM)
-# ─────────────────────────────────────────────────────────────────────────────
 
 async def executor_node(state: dict) -> dict:
     plan     = state.get("execution_plan", [])
     is_retry = (state.get("critic_iterations") or 0) > 0
 
-    # On Critic retry, reuse cached results — no side-effects
     if is_retry:
         return {"execution_results": list(state.get("execution_results") or [])}
 
@@ -453,10 +418,6 @@ async def executor_node(state: dict) -> dict:
     for step in sorted_plan:
         tool_name = step.get("tool", "")
         params    = step.get("parameters") or {}
-        # If the step explicitly sets requires_confirmation use that value.
-        # Only fall back to CONFIRMATION_TOOLS when the key is absent.
-        # This lets the confirmation fast-path (requires_confirmation=False)
-        # override the default so send_email is actually executed after "yes send it".
         requires_confirmation = step.get(
             "requires_confirmation",
             tool_name in CONFIRMATION_TOOLS   # default: require confirmation
@@ -493,9 +454,6 @@ async def executor_node(state: dict) -> dict:
     return {"execution_results": results}
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 7. EXPLOITER NODE  (llm_mini_2)
-# ─────────────────────────────────────────────────────────────────────────────
 
 async def exploiter_node(state: dict) -> dict:
     query           = _last_human(state)
@@ -525,15 +483,12 @@ async def exploiter_node(state: dict) -> dict:
 
     raw = await _llm_call(llm_mini_2, EXPLOITER_SYSTEM, human_msg)
 
-    # ── Parse pending confirmations from exploiter output ─────────────────────
     updates: dict = {"exploiter_text": raw}
 
     new_pending_email = _parse_email_draft(raw)
     if new_pending_email:
         updates["pending_email"] = new_pending_email
     else:
-        # Hard fallback: if LLM didn't follow the draft format, extract what we can
-        # from the skipped send_email's planned parameters + exploiter text as the body.
         skipped_email = next(
             (r for r in results if r.get("tool") == "send_email" and r.get("skipped")),
             None
@@ -542,7 +497,6 @@ async def exploiter_node(state: dict) -> dict:
             params = skipped_email.get("parameters") or {}
             to_addr = params.get("to", "")
             subject  = params.get("subject", "") or "Information from ScholarSync"
-            # Use the exploiter's full text as the body (Presentation Agent will format it)
             body = params.get("body", "") or raw.strip()
             if to_addr:
                 updates["pending_email"] = {
@@ -558,9 +512,6 @@ async def exploiter_node(state: dict) -> dict:
     return updates
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# 8. PRESENTATION AGENT  (llm_mini_2)
-# ─────────────────────────────────────────────────────────────────────────────
 
 async def presentation_agent_node(state: dict) -> dict:
     query          = _last_human(state)

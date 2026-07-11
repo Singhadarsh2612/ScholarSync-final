@@ -8,7 +8,6 @@
   overflow: hidden;
 }
 
-/* ── Remote video (main feed) ─────────────────────────────── */
 .remoteWrap {
   flex: 1;
   position: relative;
@@ -42,7 +41,6 @@
   font-size: 0.95rem;
 }
 
-/* ── Local video (PiP) ────────────────────────────────────── */
 .localWrap {
   position: absolute;
   bottom: 80px;
@@ -76,7 +74,6 @@
   font-family: var(--font-mono);
 }
 
-/* ── Controls ─────────────────────────────────────────────── */
 .controls {
   height: 68px;
   background: rgba(10, 15, 30, 0.95);

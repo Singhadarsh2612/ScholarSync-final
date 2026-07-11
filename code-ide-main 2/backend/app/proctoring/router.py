@@ -1,4 +1,3 @@
-# router.py
 import base64
 import binascii
 from fastapi import APIRouter, HTTPException
@@ -18,7 +17,6 @@ class ProctorPayload(BaseModel):
 
 @router.post("/proctor")
 def process_proctor_frame(payload: ProctorPayload):
-    # Strip data URI prefix if present
     if payload.frame_base64.startswith("data:image"):
         base64_data = payload.frame_base64.split(",", 1)[1]
     else:
@@ -32,7 +30,6 @@ def process_proctor_frame(payload: ProctorPayload):
     except binascii.Error:
         raise HTTPException(status_code=400, detail="Invalid base64 encoding")
 
-    # Azure Face API every 30 frames (~1 call per 3s at 10fps)
     check_face_count = (payload.frame_id % 30 == 0)
 
     try:

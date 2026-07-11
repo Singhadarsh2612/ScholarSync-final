@@ -1,31 +1,25 @@
-/* ── ScholarSync Design System Globals ──────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
 :root {
-  /* Navy backgrounds */
   --ss-bg:       #020810;
   --ss-panel:    #050d1c;
   --ss-panel2:   #08152a;
   --ss-panel3:   #0c1d3a;
   --ss-panel4:   #102448;
 
-  /* Primary accents */
   --ss-azure:    #1060f0;
   --ss-azure2:   #3d7fff;
   --ss-azure3:   #6aa0ff;
   --ss-cyan:     #00cfff;
   --ss-mint:     #00e5a0;
 
-  /* Text */
   --ss-text:     #edf4ff;
   --ss-muted:    #8aaed4;
   --ss-dim:      #426080;
 
-  /* Borders */
   --ss-border:   rgba(16,96,240,.14);
   --ss-border2:  rgba(0,207,255,.18);
 
-  /* Glows */
   --ss-glow:     rgba(16,96,240,.2);
   --ss-glow2:    rgba(0,207,255,.15);
 }
@@ -48,7 +42,6 @@ code, pre, textarea.code-area {
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
 }
 
-/* ── Scrollbar Styling ───────────────────────────────────────────────── */
 ::-webkit-scrollbar {
   width: 6px;
   height: 6px;
@@ -65,7 +58,6 @@ code, pre, textarea.code-area {
   background: var(--ss-cyan);
 }
 
-/* ── Micro-Animations ────────────────────────────────────────────────── */
 @keyframes ss-breathing-glow {
   0%, 100% { box-shadow: 0 0 8px var(--ss-glow); }
   50%       { box-shadow: 0 0 22px var(--ss-glow), 0 0 40px rgba(0,207,255,.1); }
@@ -86,7 +78,6 @@ code, pre, textarea.code-area {
   to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ── AI Orb Animations ───────────────────────────────────────────────── */
 @keyframes ss-orb-breathe {
   0%, 100% {
     box-shadow:
@@ -159,7 +150,6 @@ code, pre, textarea.code-area {
 }
 
 
-/* ── IDE Helper Classes ──────────────────────────────────────────────── */
 .ss-glow-border {
   border: 1px solid var(--ss-border2) !important;
   box-shadow: 0 0 10px var(--ss-glow2);

@@ -18,7 +18,6 @@ export const useWebRTC = ({ socket, roomId, isExpert }) => {
   const [isAudioOn,  setIsAudioOn]  = useState(true);
   const [remoteStream, setRemoteStream] = useState(null);
 
-  // ── Get user media ──────────────────────────────────────────────────────────
   const startLocalStream = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -31,7 +30,6 @@ export const useWebRTC = ({ socket, roomId, isExpert }) => {
     }
   }, []);
 
-  // ── Create RTCPeerConnection ────────────────────────────────────────────────
   const createPeerConnection = useCallback(() => {
     const pc = new RTCPeerConnection(ICE_SERVERS);
 
@@ -54,7 +52,6 @@ export const useWebRTC = ({ socket, roomId, isExpert }) => {
       }
     };
 
-    // Add local tracks
     if (localStream.current) {
       localStream.current.getTracks().forEach(track =>
         pc.addTrack(track, localStream.current)
@@ -65,7 +62,6 @@ export const useWebRTC = ({ socket, roomId, isExpert }) => {
     return pc;
   }, [socket, roomId]);
 
-  // ── Initiate call (caller side) ─────────────────────────────────────────────
   const startCall = useCallback(async () => {
     try {
       await startLocalStream();
@@ -80,7 +76,6 @@ export const useWebRTC = ({ socket, roomId, isExpert }) => {
     }
   }, [startLocalStream, createPeerConnection, socket, roomId]);
 
-  // ── Handle incoming offer (callee side) ─────────────────────────────────────
   const handleOffer = useCallback(async ({ offer }) => {
     try {
       await startLocalStream();
@@ -95,7 +90,6 @@ export const useWebRTC = ({ socket, roomId, isExpert }) => {
     }
   }, [startLocalStream, createPeerConnection, socket, roomId]);
 
-  // ── Handle answer ───────────────────────────────────────────────────────────
   const handleAnswer = useCallback(async ({ answer }) => {
     try {
       await peerConnection.current?.setRemoteDescription(new RTCSessionDescription(answer));
@@ -105,7 +99,6 @@ export const useWebRTC = ({ socket, roomId, isExpert }) => {
     }
   }, []);
 
-  // ── Handle ICE candidate ────────────────────────────────────────────────────
   const handleIceCandidate = useCallback(async ({ candidate }) => {
     try {
       await peerConnection.current?.addIceCandidate(new RTCIceCandidate(candidate));
@@ -114,7 +107,6 @@ export const useWebRTC = ({ socket, roomId, isExpert }) => {
     }
   }, []);
 
-  // ── End call ────────────────────────────────────────────────────────────────
   const endCall = useCallback(() => {
     peerConnection.current?.close();
     peerConnection.current = null;
@@ -127,7 +119,6 @@ export const useWebRTC = ({ socket, roomId, isExpert }) => {
     socket?.emit('callEnded', { roomId });
   }, [socket, roomId]);
 
-  // ── Toggle video/audio ──────────────────────────────────────────────────────
   const toggleVideo = useCallback(() => {
     if (localStream.current) {
       const track = localStream.current.getVideoTracks()[0];
@@ -142,7 +133,6 @@ export const useWebRTC = ({ socket, roomId, isExpert }) => {
     }
   }, []);
 
-  // ── Socket event listeners ──────────────────────────────────────────────────
   useEffect(() => {
     if (!socket) return;
     socket.on('webrtc:offer',         handleOffer);
@@ -158,7 +148,6 @@ export const useWebRTC = ({ socket, roomId, isExpert }) => {
     };
   }, [socket, handleOffer, handleAnswer, handleIceCandidate, endCall]);
 
-  // Cleanup on unmount
   useEffect(() => {
     return () => {
       localStream.current?.getTracks().forEach(t => t.stop());

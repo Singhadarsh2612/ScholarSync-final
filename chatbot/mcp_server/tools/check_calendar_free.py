@@ -1,5 +1,6 @@
 from datetime import datetime
 import pytz
+# pyrefly: ignore [missing-import]
 from ..calendar_auth import get_calendar_service, CALENDAR_ID
 
 IST = pytz.timezone("Asia/Kolkata")
@@ -41,4 +42,4 @@ def check_calendar_free(data):
         return {"result": "You already have an event during this time."}
 
     except Exception as e:
-        return {"result": f"Calendar error: {str(e)}"}
+        return {"result": f"Calendar error: {str(e)}"}

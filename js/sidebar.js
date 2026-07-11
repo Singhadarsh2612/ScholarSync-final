@@ -33,7 +33,6 @@ export function initSidebarSync(){
                 </button>
             `;
 
-            // switch thread click
             item.onclick = (e) => {
 
                 if(e.target.classList.contains("delete-btn"))
@@ -50,7 +49,6 @@ export function initSidebarSync(){
                 item.classList.add("active");
             };
 
-            // IMPORTANT: attach delete handler
             const deleteBtn = item.querySelector(".delete-btn");
 
             deleteBtn.onclick = async (e) => {

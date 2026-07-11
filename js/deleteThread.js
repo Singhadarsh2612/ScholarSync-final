@@ -31,10 +31,8 @@ export async function deleteThread(threadId) {
 
             console.log("Thread deleted:", threadId);
 
-            // reload thread list
             await loadThreads();
 
-            // clear chat box
             document.getElementById("chat-box").innerHTML = "";
 
         }
