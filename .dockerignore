@@ -8,6 +8,13 @@ myenv/
 .git/
 .gitignore
 
+# ── Node (the JS services build in their own images) ──
+node_modules/
+package.json
+interview-ui/
+expert-chat/
+expert-chat-ui/
+
 # ── IDE / Editor ──
 .vscode/
 .idea/
@@ -23,28 +30,20 @@ Dockerfile
 docker-compose.yml
 .dockerignore
 
-# ── Logs & temp files ──
+# ── Logs ──
 *.log
-*.txt
-!requirements.txt
 
-# ── OS files ──
-.DS_Store
-Thumbs.db
-
-# ── Secrets (injected via env vars at runtime) ──
+# ── Secrets (injected as env vars at runtime) ──
 .env
 
-# ── Test / scratch scripts ──
-test.py
-test_*.py
-fix_swarm.py
-clean_chars.py
-downloadtest.py
-setup_db.py
-reconstruct.py
-download_docs.py
+# ── Local scratch / diagnostics ──
+check_scores.py
+query_db.py
+diagnose_speech.py
+*.bak
 
 # ── Generated artifacts ──
 generated_pdfs/
 cache/
+faiss_index/
+resume_cache/

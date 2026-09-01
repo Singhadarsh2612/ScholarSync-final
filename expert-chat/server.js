@@ -4,7 +4,11 @@ const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
-require('dotenv').config();
+
+const { PORT, CLIENT_URL, assertConfig } = require('./config/env');
+
+// Refuse to boot with missing critical configuration.
+assertConfig();
 
 const authRoutes = require('./routes/authRoutes');
 const chatRoutes = require('./routes/chatRoutes');
@@ -18,7 +22,7 @@ const server = http.createServer(app);
 
 const io = new Server(server, {
   cors: {
-    origin: 'https://scholarsync-chat-frontend-ixje.onrender.com',
+    origin: CLIENT_URL,
     methods: ['GET', 'POST'],
     credentials: true,
   },
@@ -27,7 +31,7 @@ const io = new Server(server, {
 connectDB();
 
 app.use(cors({
-  origin: 'https://scholarsync-chat-frontend-ixje.onrender.com',
+  origin: CLIENT_URL,
   credentials: true,
 }));
 app.use(express.json());
@@ -46,11 +50,10 @@ app.get('/api/health', (req, res) => {
 
 initSocket(io);
 
-const PORT = process.env.PORT || 5002;
 server.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📡 Socket.IO ready`);
-  console.log(`🌍 Client URL: https://scholarsync-chat-frontend-ixje.onrender.com`);
+  console.log(`🌍 Client URL: ${CLIENT_URL}`);
 });
 
 module.exports = { app, io };

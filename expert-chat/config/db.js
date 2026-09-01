@@ -1,11 +1,15 @@
 const mongoose = require('mongoose');
-const dns = require('dns');
 
-dns.setServers(['8.8.8.8', '8.8.4.4']);
+const { MONGO_URI } = require('./env');
+
+// NOTE: this module used to pin process-wide DNS to Google's resolvers.
+// That breaks any private network - including Docker Compose, where the
+// 'mongo' hostname resolves only via Docker's embedded DNS server - so name
+// resolution is now left to the host.
 
 const connectDB = async () => {
   try {
-    const conn = await mongoose.connect(process.env.MONGO_URI || 'mongodb://localhost:27017/scholarsync_chat');
+    const conn = await mongoose.connect(MONGO_URI);
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
   } catch (error) {
     console.error(`❌ MongoDB connection error: ${error.message}`);

@@ -1,6 +1,6 @@
 from langchain_core.messages import SystemMessage
-from app.services.llm import get_llm
-from app.state import InterviewState
+from interview.app.services.llm import get_llm
+from interview.app.state import InterviewState
 
 def hint_node(state: InterviewState):
     llm = get_llm("hint")

@@ -5,6 +5,7 @@ from .fetch_api_data import fetch_exam_schedule, fetch_assignments
 from ..mcp_server.tools.create_calendar_event import create_calendar_event
 from ..mcp_server.tools.update_event_by_title import update_event_by_title
 from ..mcp_server.tools.delete_event_by_title import delete_event_by_title
+from endpoints import ASSIGNMENTS_URL, MATERIALS_URL
 
 DB_FILE = "chatbot/sync/sync_db.json"
 
@@ -148,7 +149,7 @@ def sync_rag_embeddings():
 
     print("Pre-computing RAG embeddings for assignments...")
     try:
-        url_asgn = "https://student-portal-3-tos6.onrender.com/api/student/69ad240e7352e15b1e37b844/assignments"
+        url_asgn = ASSIGNMENTS_URL
         data_asgn = requests.get(url_asgn).json()
         for a in data_asgn.get("data", {}).get("assignments", {}).get("upcoming", []):
             doc = a.get("assignmentDoc")
@@ -158,7 +159,7 @@ def sync_rag_embeddings():
 
     print("Pre-computing RAG embeddings for materials...")
     try:
-        url_mat = "https://student-portal-3-tos6.onrender.com/materials"
+        url_mat = MATERIALS_URL
         data_mat = requests.get(url_mat).json()
         for m in data_mat.get("data", []):
             link = m.get("materialLink")

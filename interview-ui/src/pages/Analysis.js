@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate, useLocation } from "react-router-dom";
-import axios from "axios";
 import { useSession } from "../context/SessionContext";
-import { globalAudioContext } from "./Landing";
+import { playBase64Audio } from "../audio/player";
+import * as api from "../api/interviewApi";
 import { 
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
     Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis,
@@ -43,7 +43,6 @@ const ChartTooltip = ({ active, payload, label }) => {
 };
 
 const Analysis = () => {
-    const API_URL = process.env.REACT_APP_API_URL || "https://codeide-backend.mangopebble-d7a787f1.centralindia.azurecontainerapps.io";
     const [searchParams] = useSearchParams();
     const sessionId = searchParams.get("session");
     const navigate = useNavigate();
@@ -58,15 +57,8 @@ const Analysis = () => {
 
     useEffect(() => {
         if (location.state && location.state.finalAudio) {
-            const playBase64Audio = (base64String) => {
-                if (!base64String || !globalAudioContext) return;
-                try {
-                    try { globalAudioContext.pause(); globalAudioContext.currentTime = 0; } catch (e) {}
-                    globalAudioContext.src = "data:audio/wav;base64," + base64String;
-                    globalAudioContext.load();
-                    globalAudioContext.play().catch(e => console.error("Proctor audio error:", e));
-                } catch (e) { console.error(e); }
-            };
+            // The interviewer's closing remark, handed over from the
+            // interview page through router state.
             setTimeout(() => playBase64Audio(location.state.finalAudio), 1000);
         }
     }, [location.state]);
@@ -77,9 +69,9 @@ const Analysis = () => {
         const fetchCandidateHistory = async () => {
             if (!userId) return;
             try {
-                const res = await axios.get(`${API_URL}/candidate/history`, { params: { user_id: userId } });
-                if (res.data.success) {
-                    const attempts = res.data.attempts;
+                const data = await api.fetchCandidateHistory({ user_id: userId });
+                if (data.success) {
+                    const attempts = data.attempts;
                     const chartData = attempts.map((att, index) => ({
                         name: `A${index + 1}`,
                         topic: att.topic || "General",
@@ -108,15 +100,15 @@ const Analysis = () => {
                     
                     setHistoryAttempts(chartData);
                     setTopicData(tData);
-                    setHistoryInsights(res.data.insights);
+                    setHistoryInsights(data.insights);
                 }
             } catch (err) { console.error("History fetch error:", err); }
         };
 
         const fetchAnalysis = async () => {
             try {
-                const res = await axios.get(`${API_URL}/session/${sessionId}/analysis`);
-                setReport(res.data.analysis || "No analysis found for this session.");
+                const data = await api.fetchSessionAnalysis(sessionId);
+                setReport(data.analysis || "No analysis found for this session.");
                 fetchCandidateHistory();
             } catch (err) {
                 console.error("Analysis error:", err);
@@ -124,7 +116,7 @@ const Analysis = () => {
             }
         };
         fetchAnalysis();
-    }, [sessionId, navigate, userId, API_URL]);
+    }, [sessionId, navigate, userId]);
 
     const panel = { background: SS.panel, border: `1px solid ${SS.border}`, borderRadius: "16px", padding: "24px", boxShadow: "0 8px 32px rgba(16,96,240,.1)", display: "flex", flexDirection: "column" };
     

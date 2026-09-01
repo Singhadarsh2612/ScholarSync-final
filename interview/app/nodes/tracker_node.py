@@ -1,5 +1,5 @@
 import time
-from app.state import InterviewState
+from interview.app.state import InterviewState
 
 
 PAUSE_LIMIT = 120

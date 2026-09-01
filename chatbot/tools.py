@@ -4,7 +4,18 @@ import numexpr as ne
 from tavily import TavilyClient
 import os
 
-client = TavilyClient(api_key=os.getenv("TAVILY_API_KEY"))
+_client = None
+
+
+def _get_client():
+    """Create the Tavily client on first use; None when no key is configured."""
+    global _client
+    if _client is None:
+        key = os.getenv("TAVILY_API_KEY")
+        if not key:
+            return None
+        _client = TavilyClient(api_key=key)
+    return _client
 
 @tool
 def calculator(expression: str) -> str:
@@ -33,6 +44,10 @@ def current_time() -> str:
 @tool
 def web_search(query: str) -> str:
     """Search the web for latest information"""
+
+    client = _get_client()
+    if client is None:
+        return "Web search is unavailable: TAVILY_API_KEY is not set."
 
     try:
         response = client.search(

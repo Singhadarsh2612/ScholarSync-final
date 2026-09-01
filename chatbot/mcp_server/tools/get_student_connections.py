@@ -1,6 +1,8 @@
 import requests
 
-API_URL = "https://scholarsync-chat-uh1x.onrender.com/api/connect/all?studentId=test-user-123"
+from endpoints import CHAT_API_URL, CHAT_STUDENT_ID
+
+API_URL = f"{CHAT_API_URL}/api/connect/all?studentId={CHAT_STUDENT_ID}"
 
 def get_student_connections():
     print("[MCP] get_student_connections")

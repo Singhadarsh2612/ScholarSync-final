@@ -1,11 +1,15 @@
 # pyrefly: ignore [missing-import]
-from ..config import tavily_client
+from ..config import get_tavily_client
 
 def web_search(data):
 
     query = data["query"]
 
     print("[MCP] web_search ->", query)
+
+    tavily_client = get_tavily_client()
+    if tavily_client is None:
+        return {"result": "Web search is unavailable: TAVILY_API_KEY is not set."}
 
     try:
 

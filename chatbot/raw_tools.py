@@ -11,27 +11,45 @@ All functions are synchronous.  The Executor wraps them in asyncio.to_thread.
 import json
 import requests
 
-_STUDENT_ID   = "69ad240e7352e15b1e37b844"
-_STUDENT_ID_2 = "69abdbea843e1db183a2b20f"
+from endpoints import (
+    ASSIGNMENTS_URL as _ASSIGNMENTS_URL,
+    MATERIALS_URL as _MATERIALS_URL,
+    EXAMS_URL as _EXAMS_URL,
+    MARKS_URL as _MARKS_URL,
+    ATTENDANCE_URL as _ATTEND_URL,
+    EXAM_SCHED_URL as _EXAM_SCHED_URL,
+    INTERVIEW_UI_URL as _FRONTEND_BASE,
+)
 
-_ASSIGNMENTS_URL = f"https://student-portal-3-tos6.onrender.com/api/student/{_STUDENT_ID}/assignments"
-_MATERIALS_URL   = "https://student-portal-3-tos6.onrender.com/materials"
-_EXAMS_URL       = f"https://student-portal-3-tos6.onrender.com/api/student/{_STUDENT_ID}/exams"
-_MARKS_URL       = f"https://student-portal-2-gh1j.onrender.com/api/student/{_STUDENT_ID_2}/marks"
-_ATTEND_URL      = f"https://student-portal-2-gh1j.onrender.com/api/student/{_STUDENT_ID_2}/attendance"
-_EXAM_SCHED_URL  = f"https://student-portal-2-gh1j.onrender.com/api/student/{_STUDENT_ID_2}/exam-schedule"
-_INTERVIEW_URL   = "https://scholarsync-aps-backend.azurewebsites.net/api/interview_routing"
-_FRONTEND_BASE   = "https://scholarsync-aps-client.azurewebsites.net"
 
-try:
-    _iv_resp = requests.get(_INTERVIEW_URL, timeout=15)
-    _iv_resp.raise_for_status()
-    _interview_data    = _iv_resp.json()
-    _interview_mapping = {item["question_tag"]: item for item in _interview_data}
-except Exception as _e:
-    print(f"[raw_tools] Interview pre-fetch failed: {_e}")
-    _interview_data    = []
-    _interview_mapping = {}
+def _load_interview_data():
+    """Fetch interview routing from the merged interview service, in-process.
+
+    This used to be an HTTP GET to a separate deployment, executed at import
+    time — so a slow or dead host blocked every import of this module. The
+    interview service now lives in the same process, so it is a direct call,
+    made on demand and cached.
+    """
+    from interview.main import get_interview_routing
+
+    return get_interview_routing()
+
+
+_interview_cache = None
+
+
+def _interview_state():
+    """Return (data, mapping), loading and caching on first use."""
+    global _interview_cache
+    if _interview_cache is None:
+        try:
+            data = _load_interview_data()
+            mapping = {item["question_tag"]: item for item in data}
+        except Exception as e:
+            print(f"[raw_tools] Interview routing unavailable: {e}")
+            data, mapping = [], {}
+        _interview_cache = (data, mapping)
+    return _interview_cache
 
 
 
@@ -171,6 +189,7 @@ def get_exams_raw() -> list:
 
 def get_interview_info_raw() -> list:
     """Return coding interview practice scores for all topics."""
+    _interview_data, _ = _interview_state()
     if not _interview_data:
         return [{"error": "Interview data unavailable"}]
     return [
@@ -188,6 +207,7 @@ def get_interview_info_raw() -> list:
 
 def prepare_interview_session_raw(topic: str = "") -> dict:
     """Return interview URL + performance stats for a given topic."""
+    _, _interview_mapping = _interview_state()
     tag = topic.strip().lower().replace(" ", "_")
     if tag not in _interview_mapping:
         available = ", ".join(sorted(_interview_mapping.keys()))
@@ -220,7 +240,7 @@ def solve_assignment_raw(question: str = "", assignment_url: str = "",
 
 import requests as _req
 
-_MCP_BASE = "http://127.0.0.1:8002"
+from endpoints import MCP_URL as _MCP_BASE
 
 
 def _mcp_post(endpoint: str, payload: dict = None) -> str:

@@ -1,4 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
+
+const { CLIENT_URL } = require('../config/env');
 const Expert = require('../models/Expert');
 const ChatRoom = require('../models/ChatRoom');
 
@@ -72,7 +74,7 @@ const connectUser = async (req, res) => {
     });
 
     const chatUrl = `/chat/${roomId}`;
-    const fullUrl = `https://scholarsync-chat-frontend-ixje.onrender.com${chatUrl}`;
+    const fullUrl = `${CLIENT_URL}${chatUrl}`;
 
     res.json({
       roomId,
@@ -127,7 +129,7 @@ const connectAndRedirect = async (req, res) => {
       });
     }
 
-    const fullUrl = `https://scholarsync-chat-frontend-ixje.onrender.com/chat/${roomId}`;
+    const fullUrl = `${CLIENT_URL}/chat/${roomId}`;
     res.redirect(fullUrl);
   } catch (error) {
     console.error('Redirect Connect error:', error);
@@ -145,33 +147,33 @@ const getAllExperts = async (req, res) => {
       : [];
 
     const result = await Promise.all(allExperts.map(async expert => {
-      let existingRoom = activeRooms.find(r => r.expertId.toString() === expert._id.toString());
-      
-      const clientUrl = 'https://scholarsync-chat-frontend-ixje.onrender.com';
-      
-      if (!existingRoom && studentId) {
-        const newRoomId = uuidv4();
-        existingRoom = await ChatRoom.create({
-          roomId: newRoomId,
+      let room = activeRooms.find(r => r.expertId.toString() === expert._id.toString());
+
+      // Without a studentId there is no per-student room to look up, so reuse
+      // this expert's existing anonymous room. Previously a fresh room was
+      // persisted on every request, so each anonymous call to this endpoint
+      // leaked one ChatRoom per expert.
+      if (!room && !studentId) {
+        room = await ChatRoom.findOne({
+          studentId: null,
+          expertId: expert._id,
+          isActive: true,
+        });
+      }
+
+      if (!room) {
+        room = await ChatRoom.create({
+          roomId: uuidv4(),
           expertId: expert._id,
           subject: expert.subject,
           studentId,
         });
       }
 
-      const finalRoomId = existingRoom ? existingRoom.roomId : uuidv4();
-
-      if (!existingRoom && !studentId) {
-        await ChatRoom.create({
-          roomId: finalRoomId,
-          expertId: expert._id,
-          subject: expert.subject,
-          studentId: null,
-        });
-      }
+      const finalRoomId = room.roomId;
 
       const chatUrl = `/chat/${finalRoomId}`;
-      const fullUrl = `${clientUrl}${chatUrl}`;
+      const fullUrl = `${CLIENT_URL}${chatUrl}`;
 
       return {
         roomId: finalRoomId,

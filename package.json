@@ -1,0 +1,16 @@
+{
+  "name": "scholarsync",
+  "version": "1.0.0",
+  "description": "Convenience scripts for the JavaScript apps. The Python hub is run with `python run.py`; see readme.md.",
+  "private": true,
+  "scripts": {
+    "install:all": "npm --prefix expert-chat install && npm --prefix expert-chat-ui install && npm --prefix interview-ui install",
+    "dev:chat": "concurrently \"npm --prefix expert-chat run dev\" \"npm --prefix expert-chat-ui start\"",
+    "dev:interview-ui": "npm --prefix interview-ui start",
+    "seed:experts": "npm --prefix expert-chat run seed",
+    "build:ui": "npm --prefix interview-ui run build && npm --prefix expert-chat-ui run build"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}

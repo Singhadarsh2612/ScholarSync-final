@@ -1,6 +1,6 @@
 import requests
 
-API_URL = "https://student-portal-2-gh1j.onrender.com/api/student/69abdbea843e1db183a2b20f/subjects"
+from endpoints import SUBJECTS_URL as API_URL
 
 
 def get_subject_professors():

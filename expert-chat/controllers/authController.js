@@ -1,9 +1,11 @@
 const jwt = require('jsonwebtoken');
 const Expert = require('../models/Expert');
 
+const { JWT_SECRET, JWT_EXPIRES_IN } = require('../config/env');
+
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'fallback_secret', {
-    expiresIn: '7d',
+  return jwt.sign({ id }, JWT_SECRET, {
+    expiresIn: JWT_EXPIRES_IN,
   });
 };
 

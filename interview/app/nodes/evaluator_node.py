@@ -1,7 +1,7 @@
 from langchain_core.messages import SystemMessage, HumanMessage
-from app.services.llm import get_llm
-from app.state import InterviewState
-from app.services.session_store import save_session
+from interview.app.services.llm import get_llm
+from interview.app.state import InterviewState
+from interview.app.services.session_store import save_session
 
 def evaluator_node(state: InterviewState):
     llm = get_llm("analysis")

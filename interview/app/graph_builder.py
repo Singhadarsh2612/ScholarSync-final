@@ -1,13 +1,13 @@
 from langgraph.graph import StateGraph, START, END
 
-from app.state import InterviewState
+from interview.app.state import InterviewState
 
-from app.nodes.tracker_node import track_progress_node
-from app.nodes.evaluator_node import evaluator_node
-from app.nodes.interviewer_node import interviewer_node
-from app.nodes.hint_node import hint_node
-from app.nodes.feedback_node import feedback_node
-from app.nodes.wrapup_node import wrapup_node
+from interview.app.nodes.tracker_node import track_progress_node
+from interview.app.nodes.evaluator_node import evaluator_node
+from interview.app.nodes.interviewer_node import interviewer_node
+from interview.app.nodes.hint_node import hint_node
+from interview.app.nodes.feedback_node import feedback_node
+from interview.app.nodes.wrapup_node import wrapup_node
 
 
 def route_next(state: InterviewState):

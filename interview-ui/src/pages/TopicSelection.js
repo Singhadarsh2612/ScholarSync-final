@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import axios from "axios";
-import { globalAudioContext } from "./Landing";
+import { unlockAudio } from "../audio/player";
+import * as api from "../api/interviewApi";
 
 const TOPIC_ICONS = {
   "two-pointers": "👆",
@@ -21,7 +21,6 @@ const TopicSelection = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session") || "default";
-  const API_URL = process.env.REACT_APP_API_URL || "http://localhost:8000";
 
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,37 +28,35 @@ const TopicSelection = () => {
   const [hovering, setHovering] = useState(null);
 
   useEffect(() => {
-    axios.get(`${API_URL}/questions/topics`)
-      .then(res => {
-        setTopics(res.data.topics || []);
+    api.fetchTopics()
+      .then(data => {
+        setTopics(data.topics || []);
         setLoading(false);
       })
       .catch(err => {
         console.error("Failed to fetch topics:", err);
         setLoading(false);
       });
-  }, [API_URL]);
+  }, []);
 
   const handleSelectTopic = async (topic) => {
     setSelected(topic.slug);
 
-    try {
-      globalAudioContext.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
-      await globalAudioContext.play().catch(() => {});
-    } catch (e) {}
+    // Selecting a topic is a user gesture, so it is our chance to unlock
+    // audio playback before the interview page needs it.
+    await unlockAudio();
 
     try {
-      const res = await axios.get(`${API_URL}/questions/${topic.slug}`);
-      const questions = res.data.questions || [];
+      const data = await api.fetchQuestionsByTopic(topic.slug);
+      const questions = data.questions || [];
       if (questions.length > 0) {
         const problemId = questions[0].id;
 
+        // Pre-fetch the greeting so the interview page can play it instantly.
         try {
-          const welcomeRes = await axios.post(`${API_URL}/ai/welcome`, {
-            code: "", problemId: problemId, session_id: sessionId
-          });
-          if (welcomeRes.data.audio) {
-            sessionStorage.setItem(`welcomeAudio_${sessionId}`, welcomeRes.data.audio);
+          const welcome = await api.requestWelcome({ problemId });
+          if (welcome.audio) {
+            sessionStorage.setItem(`welcomeAudio_${sessionId}`, welcome.audio);
           }
         } catch (e) {
           console.warn("[TopicSelection] Welcome audio prefetch failed:", e.message);

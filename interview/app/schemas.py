@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Literal, Optional
 
 
 class CodeUpdatePayload(BaseModel):
@@ -13,6 +13,10 @@ class CodeUpdatePayload(BaseModel):
 class RunCodePayload(BaseModel):
     code: str
     input: str = ""
+    # The client states the language explicitly. Left unset, the backend
+    # guesses from the source text, which misfires on C++ that merely mentions
+    # a Python keyword (e.g. "import" inside a comment or string).
+    language: Optional[Literal["cpp", "python"]] = None
 
 
 class AIRequestPayload(BaseModel):

@@ -3,6 +3,8 @@ const ChatRoom = require('../models/ChatRoom');
 const Expert = require('../models/Expert');
 const path = require('path');
 
+const { SERVER_URL } = require('../config/env');
+
 const getRoomInfo = async (req, res) => {
   try {
     const { roomId } = req.params;
@@ -48,8 +50,7 @@ const uploadFile = async (req, res) => {
       return res.status(400).json({ message: 'No file uploaded' });
     }
 
-    const serverUrl = 'https://scholarsync-chat-uh1x.onrender.com';
-    const fileUrl = `${serverUrl}/uploads/${req.file.filename}`;
+    const fileUrl = `${SERVER_URL}/uploads/${req.file.filename}`;
     const fileType = req.file.mimetype.startsWith('image/') ? 'image' : 'file';
 
     res.json({

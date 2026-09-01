@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useSearchParams, useNavigate } from "react-router-dom";
-import axios from "axios";
+import * as api from "../api/interviewApi";
 import {
     LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid,
     Tooltip as RechartsTooltip, ResponsiveContainer, Legend
@@ -33,7 +33,6 @@ const ChartTooltip = ({ active, payload }) => {
 };
 
 const Dashboard = () => {
-    const API_URL = process.env.REACT_APP_API_URL || "https://codeide-backend.mangopebble-d7a787f1.centralindia.azurecontainerapps.io";
     const [searchParams, setSearchParams] = useSearchParams();
     const candidateNameQuery = searchParams.get("name") || "";
     const [searchName, setSearchName] = useState(candidateNameQuery);
@@ -48,9 +47,9 @@ const Dashboard = () => {
             if (!name.trim()) return;
             setLoading(true); setError(""); setAttempts([]); setInsights("");
             try {
-                const res = await axios.get(`${API_URL}/candidate/history`, { params: { name } });
-                if (res.data.success) {
-                    const formattedData = res.data.attempts.map((att, index) => ({
+                const data = await api.fetchCandidateHistory({ name });
+                if (data.success) {
+                    const formattedData = data.attempts.map((att, index) => ({
                         attemptNo: `Attempt ${index + 1}`,
                         CodeScore: att.overall_score || 0,
                         CSScore: att.cs_score || 0,
@@ -58,9 +57,9 @@ const Dashboard = () => {
                         HintsUsed: att.hint_level || 0,
                     }));
                     setAttempts(formattedData);
-                    setInsights(res.data.insights || "No insights available.");
+                    setInsights(data.insights || "No insights available.");
                 } else {
-                    setError(res.data.message || "Candidate not found or no historical data available.");
+                    setError(data.message || "Candidate not found or no historical data available.");
                 }
             } catch (err) {
                 console.error("Failed to fetch history:", err);
@@ -68,7 +67,7 @@ const Dashboard = () => {
             } finally { setLoading(false); }
         };
         if (candidateNameQuery) fetchHistory(candidateNameQuery);
-    }, [candidateNameQuery, API_URL]);
+    }, [candidateNameQuery]);
 
     const handleSearch = (e) => { e.preventDefault(); setSearchParams({ name: searchName }); };
 

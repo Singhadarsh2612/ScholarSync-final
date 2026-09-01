@@ -1,0 +1,139 @@
+# =============================================================================
+# ScholarSync — full stack
+#
+#   cp .env.example .env     # fill in your Azure keys first
+#   docker compose up --build
+#
+# Then:
+#   http://localhost:8000        hub dashboard (+ /interview/api/* routes)
+#   http://localhost:8000/docs   API reference for hub + interview
+#   http://localhost:3001        interview UI
+#   http://localhost:3000        expert-chat UI
+#
+# The hub and the MCP tool server share one image and differ only by command.
+# =============================================================================
+
+services:
+
+  # ── Databases ──────────────────────────────────────────────────────────────
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: scholarsync
+      POSTGRES_PASSWORD: scholarsync
+      POSTGRES_DB: scholarsync
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scholarsync -d scholarsync"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mongo:
+    image: mongo:7
+    # --quiet drops the per-connection accept/close chatter. Without it the
+    # healthcheck below logs a burst of NETWORK/ACCESS lines on every probe,
+    # which buries the output of every other service in `docker compose up`.
+    command: ["mongod", "--quiet"]
+    volumes:
+      - mongo_data:/data/db
+    ports:
+      - "27017:27017"
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      # start_interval polls fast only until the first pass, so `interval` can
+      # stay long without delaying startup for the services that depend on us.
+      interval: 30s
+      start_period: 30s
+      start_interval: 2s
+      timeout: 5s
+      retries: 5
+
+  # ── Python services (one image, two commands) ──────────────────────────────
+
+  mcp:
+    build: .
+    command: uvicorn chatbot.mcp_server.mcp_server:app --host 0.0.0.0 --port 8002
+    env_file: .env
+    ports:
+      - "8002:8002"
+    restart: unless-stopped
+
+  hub:
+    build: .
+    command: uvicorn server:app --host 0.0.0.0 --port 8000
+    env_file: .env
+    environment:
+      # Container hostnames, overriding the localhost defaults in .env.
+      DATABASE_URL: postgresql://scholarsync:scholarsync@postgres:5432/scholarsync
+      MONGO_URI: mongodb://mongo:27017
+      MCP_URL: http://mcp:8002
+      CHAT_API_URL: http://chat-api:5000
+      PUBLIC_BASE_URL: http://localhost:8000
+      INTERVIEW_UI_URL: http://localhost:3001
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      mongo:
+        condition: service_healthy
+      mcp:
+        condition: service_started
+    restart: unless-stopped
+
+  # ── Expert chat (MERN) ─────────────────────────────────────────────────────
+
+  chat-api:
+    build: ./expert-chat
+    environment:
+      PORT: 5000
+      MONGO_URI: mongodb://mongo:27017/scholarsync_chat
+      # Refuses to boot if unset. Generate with: openssl rand -hex 32
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
+      CLIENT_URL: http://localhost:3000
+      SERVER_URL: http://localhost:5000
+      NODE_ENV: production
+    ports:
+      - "5000:5000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    restart: unless-stopped
+
+  chat-ui:
+    build:
+      context: ./expert-chat-ui
+      args:
+        # Baked in at build time by Create React App, so these are the URLs the
+        # browser uses — host-visible, not container-internal.
+        REACT_APP_API_URL: http://localhost:5000
+        REACT_APP_SOCKET_URL: http://localhost:5000
+    ports:
+      - "3000:3000"
+    depends_on:
+      - chat-api
+    restart: unless-stopped
+
+  # ── Interview UI ───────────────────────────────────────────────────────────
+
+  interview-ui:
+    build:
+      context: ./interview-ui
+      args:
+        # Must include both the /interview mount prefix and the /api segment:
+        # the client calls e.g. `${REACT_APP_API_URL}/questions/topics`.
+        REACT_APP_API_URL: http://localhost:8000/interview/api
+    ports:
+      - "3001:3000"
+    depends_on:
+      - hub
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  mongo_data:

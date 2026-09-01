@@ -3,7 +3,7 @@ import requests
 
 from chatbot.mcp_server.tools.get_subject_professors import get_subject_professors
 
-MCP_URL = "http://127.0.0.1:8002"
+from endpoints import MCP_URL
 
 
 def call_mcp(endpoint, payload=None):

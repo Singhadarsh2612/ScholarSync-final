@@ -32,8 +32,9 @@ venv/
 env/
 
 # Logs & Debugging Files
+# NOTE: do NOT reinstate a blanket `*.txt` rule here. It silently excluded the
+# interview service's requirements.txt, which is why that file was missing.
 *.log
-*.txt
 azure_findings.txt
 events_out.txt
 uv_log.txt
@@ -42,3 +43,19 @@ uv_log.txt
 .DS_Store
 .idea/
 .gemini/
+
+# ── Front-end builds ──
+build/
+dist/
+
+# ── Expert-chat uploads (keep the directory, drop the contents) ──
+expert-chat/uploads/*
+!expert-chat/uploads/.gitkeep
+
+# ── Interview service generated artefacts ──
+interview/faiss_index/
+interview/resume_cache/
+
+# NOTE: the `cache/` rule above is intentionally broad but has a sharp edge —
+# it also matches venv/Lib/site-packages/langgraph/cache/, which is why the
+# committed venv could not import langgraph. Untrack venv/ before narrowing it.

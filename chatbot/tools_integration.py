@@ -5,24 +5,37 @@ import webbrowser
 from assignment_solver import solve_assignment
 from analysis_api import fetch_student_data
 
-INTERVIEW_ROUTING_API = "https://scholarsync-aps-backend.azurewebsites.net/api/interview_routing"
-FRONTEND_BASE          = "https://scholarsync-aps-client.azurewebsites.net"
+from endpoints import (
+    ASSIGNMENTS_URL as ASSIGNMENTS_API,
+    MATERIALS_URL as MATERIALS_API,
+    EXAMS_URL as EXAMS_API,
+    MARKS_URL as MARKS_API,
+    ATTENDANCE_URL as ATTENDANCE_API,
+    EXAM_SCHED_URL as EXAM_SCHEDULE_API,
+    INTERVIEW_UI_URL as FRONTEND_BASE,
+)
 
-try:
-    _interview_response = requests.get(INTERVIEW_ROUTING_API, timeout=15)
-    _interview_response.raise_for_status()
-    _interview_data    = _interview_response.json()
-    _interview_mapping = {item["question_tag"]: item for item in _interview_data}
-except Exception as _e:
-    print(f"[Interview] Warning: could not pre-fetch routing data: {_e}")
-    _interview_data    = []
-    _interview_mapping = {}
+_interview_cache = None
 
-ASSIGNMENTS_API = "https://student-portal-3-tos6.onrender.com/api/student/69ad240e7352e15b1e37b844/assignments"
-MATERIALS_API  = "https://student-portal-3-tos6.onrender.com/materials"
-EXAMS_API      = "https://student-portal-3-tos6.onrender.com/api/student/69ad240e7352e15b1e37b844/exams"
-MARKS_API      = "https://student-portal-2-gh1j.onrender.com/api/student/69abdbea843e1db183a2b20f/marks"
-ATTENDANCE_API = "https://student-portal-2-gh1j.onrender.com/api/student/69abdbea843e1db183a2b20f/attendance"
+
+def _interview_state():
+    """Return (data, mapping) for interview routing, loaded on first use.
+
+    The interview service is now mounted into this same process, so this is a
+    direct call rather than the import-time HTTP GET to a separate deployment
+    that this module used to perform.
+    """
+    global _interview_cache
+    if _interview_cache is None:
+        try:
+            from interview.main import get_interview_routing
+            data = get_interview_routing()
+            mapping = {item["question_tag"]: item for item in data}
+        except Exception as e:
+            print(f"[Interview] Routing data unavailable: {e}")
+            data, mapping = [], {}
+        _interview_cache = (data, mapping)
+    return _interview_cache
 
 
 @tool
@@ -151,9 +164,6 @@ def get_marks_tool() -> str:
         return json.dumps(result, indent=2)
     except Exception as e:
         return f"Error fetching marks: {str(e)}"
-
-
-EXAM_SCHEDULE_API = "https://student-portal-2-gh1j.onrender.com/api/student/69abdbea843e1db183a2b20f/exam-schedule"
 
 
 @tool
@@ -288,6 +298,7 @@ def get_interview_info_tool() -> str:
     NEVER use the marks or attendance tools for these questions.
     """
     print("[Tool] get_interview_info_tool called")
+    _interview_data, _ = _interview_state()
     if not _interview_data:
         return "Interview routing data is currently unavailable."
     result = []
@@ -320,6 +331,7 @@ def prepare_interview_session_tool(topic: str) -> str:
     CRITICAL INSTRUCTION: You MUST output the exact `ui_interview_confirm` JSON block shown in your system prompt using the returned data. DO NOT describe the interview details in text.
     """
     print(f"[Tool] prepare_interview_session_tool called with topic={topic!r}")
+    _, _interview_mapping = _interview_state()
     tag = topic.strip().lower().replace(" ", "_")
     if tag not in _interview_mapping:
         available = ", ".join(sorted(_interview_mapping.keys()))
@@ -355,6 +367,7 @@ def open_interview_in_browser_tool(topic: str) -> str:
     Returns a confirmation message with the URL that was opened.
     """
     print(f"[Tool] open_interview_in_browser_tool called with topic={topic!r}")
+    _, _interview_mapping = _interview_state()
     tag = topic.strip().lower().replace(" ", "_")
     if tag not in _interview_mapping:
         available = ", ".join(sorted(_interview_mapping.keys()))

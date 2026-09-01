@@ -16,6 +16,7 @@ from typing import (
 from langchain_core.exceptions import TracerException
 from langchain_core.load import dumpd
 from langchain_core.tracers.schemas import Run
+from langchain_core.utils._gateway import GATEWAY_METADATA_RESPONSE_KEY
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine, Sequence
@@ -36,6 +37,31 @@ logger = logging.getLogger(__name__)
 
 SCHEMA_FORMAT_TYPE = Literal["original", "streaming_events"]
 
+# Key under which gateway metadata is attached to a run's metadata for tracing.
+_GATEWAY_RUN_METADATA_KEY = "ls_gateway_info"
+
+
+def _extract_gateway_metadata(response: LLMResult) -> dict[str, Any] | None:
+    """Extract LangSmith gateway metadata from a model response.
+
+    When a request is routed through the LangSmith gateway, the gateway returns
+    metadata (e.g. the resolved provider and model) that integrations surface on
+    the generation's `generation_info` under `GATEWAY_METADATA_RESPONSE_KEY`.
+
+    Args:
+        response: The `LLMResult` produced by the model.
+
+    Returns:
+        The gateway metadata, or `None` if the response carries none.
+    """
+    for generations in response.generations:
+        for generation in generations:
+            generation_info = getattr(generation, "generation_info", None) or {}
+            gateway_metadata = generation_info.get(GATEWAY_METADATA_RESPONSE_KEY)
+            if isinstance(gateway_metadata, dict):
+                return gateway_metadata
+    return None
+
 
 class _TracerCore(ABC):
     """Abstract base class for tracers.
@@ -51,6 +77,9 @@ class _TracerCore(ABC):
         _schema_format: Literal[
             "original", "streaming_events", "original+chat"
         ] = "original",
+        run_map: dict[str, Run] | None = None,
+        order_map: dict[UUID, tuple[UUID, str]] | None = None,
+        _external_run_ids: dict[str, int] | None = None,
         **kwargs: Any,
     ) -> None:
         """Initialize the tracer.
@@ -70,6 +99,9 @@ class _TracerCore(ABC):
                     streaming events.
                 - `'original+chat'` is a format that is the same as `'original'` except
                     it does NOT raise an attribute error `on_chat_model_start`
+            run_map: Optional shared map of run ID to run.
+            order_map: Optional shared map of run ID to trace ordering data.
+            _external_run_ids: Optional shared set of externally injected run IDs.
             **kwargs: Additional keyword arguments that will be passed to the
                 superclass.
         """
@@ -77,11 +109,21 @@ class _TracerCore(ABC):
 
         self._schema_format = _schema_format  # For internal use only API will change.
 
-        self.run_map: dict[str, Run] = {}
+        self.run_map = run_map if run_map is not None else {}
         """Map of run ID to run. Cleared on run end."""
 
-        self.order_map: dict[UUID, tuple[UUID, str]] = {}
+        self.order_map = order_map if order_map is not None else {}
         """Map of run ID to (trace_id, dotted_order). Cleared when tracer GCed."""
+
+        self._external_run_ids: dict[str, int] = (
+            _external_run_ids if _external_run_ids is not None else {}
+        )
+        """Refcount of active children per externally-injected run ID.
+
+        These runs are added to `run_map` so child runs can find their parent,
+        but they are not managed by the tracer's callback lifecycle.  When
+        the last child finishes the entry is evicted to avoid memory leaks.
+        """
 
     @abstractmethod
     def _persist_run(self, run: Run) -> Coroutine[Any, Any, None] | None:
@@ -113,6 +155,9 @@ class _TracerCore(ABC):
                 run.dotted_order += "." + current_dotted_order
                 if parent_run := self.run_map.get(str(run.parent_run_id)):
                     self._add_child_run(parent_run, run)
+                    parent_key = str(run.parent_run_id)
+                    if parent_key in self._external_run_ids:
+                        self._external_run_ids[parent_key] += 1
             else:
                 if self.log_missing_parent:
                     logger.debug(
@@ -223,7 +268,7 @@ class _TracerCore(ABC):
 
     def _llm_run_with_token_event(
         self,
-        token: str,
+        token: str | list[str | dict[str, Any]],
         run_id: UUID,
         chunk: GenerationChunk | ChatGenerationChunk | None = None,
         parent_run_id: UUID | None = None,
@@ -300,7 +345,17 @@ class _TracerCore(ABC):
         if tool_call_count > 0:
             llm_run.extra["tool_call_count"] = tool_call_count
 
+        self._attach_gateway_metadata(llm_run, response)
+
         return llm_run
+
+    def _attach_gateway_metadata(self, run: Run, response: LLMResult) -> None:
+        """Promote LangSmith gateway metadata from the response to run metadata."""
+        gateway_metadata = _extract_gateway_metadata(response)
+        if gateway_metadata is None:
+            return
+        metadata = run.extra.setdefault("metadata", {})
+        metadata[_GATEWAY_RUN_METADATA_KEY] = gateway_metadata
 
     def _errored_llm_run(
         self, error: BaseException, run_id: UUID, response: LLMResult | None = None
@@ -321,6 +376,7 @@ class _TracerCore(ABC):
                         output_generation["message"] = dumpd(
                             cast("ChatGeneration", generation).message
                         )
+            self._attach_gateway_metadata(llm_run, response)
         llm_run.end_time = datetime.now(timezone.utc)
         llm_run.events.append({"name": "error", "time": llm_run.end_time})
 
@@ -430,7 +486,7 @@ class _TracerCore(ABC):
             kwargs.update({"metadata": metadata})
 
         if self._schema_format in {"original", "original+chat"}:
-            inputs = {"input": input_str}
+            inputs = inputs if isinstance(inputs, dict) else {"input": input_str}
         elif self._schema_format == "streaming_events":
             inputs = {"input": inputs}
         else:
@@ -536,7 +592,7 @@ class _TracerCore(ABC):
         retrieval_run.events.append({"name": "error", "time": retrieval_run.end_time})
         return retrieval_run
 
-    def __deepcopy__(self, memo: dict) -> _TracerCore:
+    def __deepcopy__(self, memo: dict[int, Any] | None = None) -> _TracerCore:
         """Return self deepcopied."""
         return self
 
@@ -583,14 +639,14 @@ class _TracerCore(ABC):
     def _on_llm_new_token(
         self,
         run: Run,
-        token: str,
+        token: str | list[str | dict[str, Any]],
         chunk: GenerationChunk | ChatGenerationChunk | None,
     ) -> Coroutine[Any, Any, None] | None:
         """Process new LLM token.
 
         Args:
             run: The LLM run.
-            token: The new token.
+            token: The new token, or a list of content blocks.
             chunk: Optional chunk.
         """
         _ = (run, token, chunk)

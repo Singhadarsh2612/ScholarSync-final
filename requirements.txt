@@ -109,3 +109,12 @@ tqdm==4.67.3
 tiktoken==0.12.0
 azure-common==1.1.28
 markdown==3.10.2
+
+# ── Interview service (merged from code-ide backend) ──
+azure-cognitiveservices-speech
+pymongo
+python-multipart
+PyPDF2
+python-docx
+langchain-community
+faiss-cpu

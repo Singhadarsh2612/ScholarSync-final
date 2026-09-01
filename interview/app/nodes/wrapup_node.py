@@ -1,6 +1,6 @@
 from langchain_core.messages import SystemMessage
-from app.services.llm import get_llm
-from app.state import InterviewState
+from interview.app.services.llm import get_llm
+from interview.app.state import InterviewState
 
 def wrapup_node(state: InterviewState):
     llm = get_llm("interview")

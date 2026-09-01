@@ -245,7 +245,16 @@ const ChatRoomPage = () => {
             </span>
           </div>
 
-          {/* Video call button removed per request */}
+          {!showVideo && (
+            <button
+              className={styles.videoBtn}
+              onClick={handleStartCall}
+              disabled={!peerOnline}
+              title={peerOnline ? 'Start a video call' : 'The other participant is offline'}
+            >
+              📹 Video call
+            </button>
+          )}
 
           {role === 'expert' && (
             <button
@@ -322,13 +331,12 @@ const ChatRoomPage = () => {
           </aside>
         )}
 
-        {/* Video panel hidden per request */}
-        {/* {showVideo && (
+        {showVideo && (
           <VideoPanel
             webrtc={webrtc}
             onEndCall={handleEndCall}
           />
-        )} */}
+        )}
 
         {/* Chat panel - always visible */}
         <ChatPanel

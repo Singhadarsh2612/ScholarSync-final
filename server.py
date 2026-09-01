@@ -43,6 +43,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ── AI coding-interviewer service, merged in as a mounted router ──
+# Serves /interview/api/*. Previously a separate FastAPI app that the hub
+# reached over HTTP; it is now called in-process.
+from interview.main import router as interview_router
+
+app.include_router(interview_router, prefix="/interview", tags=["interview"])
+
 class ChatRequest(BaseModel):
     message: str
     thread_id: str
@@ -200,21 +207,23 @@ def analysis_dashboard():
 
 import requests
 
+from endpoints import ASSIGNMENTS_URL, MATERIALS_URL, EXAMS_URL
+
 @app.get("/proxy/assignments")
 def proxy_assignments():
-    url="https://student-portal-3-tos6.onrender.com/api/student/69ad240e7352e15b1e37b844/assignments"
+    url = ASSIGNMENTS_URL
     return requests.get(url).json()
 
 
 @app.get("/proxy/materials")
 def proxy_materials():
-    url="https://student-portal-3-tos6.onrender.com/materials"
+    url = MATERIALS_URL
     return requests.get(url).json()
 
 
 @app.get("/proxy/exams")
 def proxy_exams():
-    url="https://student-portal-3-tos6.onrender.com/api/student/69ad240e7352e15b1e37b844/exams"
+    url = EXAMS_URL
     try:
         r = requests.get(url, timeout=15)
         return r.json()

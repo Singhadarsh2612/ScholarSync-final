@@ -6,16 +6,17 @@ import PyPDF2
 import docx
 
 from typing import Dict, List
-from dotenv import load_dotenv, dotenv_values
+from dotenv import load_dotenv
 
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_openai import AzureChatOpenAI,AzureOpenAIEmbeddings
 
 load_dotenv()
-env = dotenv_values(".env")
 
-FAISS_INDEX_PATH = "faiss_index"
+# Resolved against this file, not the process CWD, so the index location does
+# not move when the app is launched from the repo root or a container.
+FAISS_INDEX_PATH = os.path.join(os.path.dirname(__file__), "faiss_index")
 
 
 class CVParser:
@@ -27,10 +28,10 @@ class CVParser:
         )
 
         self.embeddings = AzureOpenAIEmbeddings(
-            azure_deployment=env.get("AZURE_EMBEDDING_DEPLOYMENT"),   # text-embedding-3-small
-            azure_endpoint=env.get("AZURE_EMBEDDING_ENDPOINT"),       # https://aiserives.openai.azure.com/
-            api_key=env.get("AZURE_EMBEDDING_API_KEY"),
-            api_version=env.get("AZURE_EMBEDDING_API_VERSION"),       # 2024-02-01
+            azure_deployment=os.getenv("AZURE_EMBEDDING_DEPLOYMENT", "text-embedding-3-small"),
+            azure_endpoint=os.getenv("AZURE_EMBEDDING_ENDPOINT"),
+            api_key=os.getenv("AZURE_EMBEDDING_API_KEY"),
+            api_version=os.getenv("AZURE_EMBEDDING_API_VERSION", "2024-02-01"),
         )
 
         self.llm = AzureChatOpenAI(

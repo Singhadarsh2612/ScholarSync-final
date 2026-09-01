@@ -1,5 +1,5 @@
-from app.services.mongo_services import get_collection
-from app.problems import problems
+from interview.app.services.mongo_services import get_collection
+from interview.app.problems import problems
 import datetime
 import uuid
 

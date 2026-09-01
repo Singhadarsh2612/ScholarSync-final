@@ -3,8 +3,7 @@ import requests
 from bs4 import BeautifulSoup
 
 
-ASSIGNMENTS_API = "https://student-portal-3-tos6.onrender.com/api/student/69ac61ef7b74cd2b4250afd3/assignments"
-MATERIALS_API = "https://student-portal-3-tos6.onrender.com/materials"
+from endpoints import ASSIGNMENTS_URL as ASSIGNMENTS_API, MATERIALS_URL as MATERIALS_API
 
 
 os.makedirs("data/assignments", exist_ok=True)

@@ -1,16 +1,13 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
 import { useSession } from "../context/SessionContext";
+import { unlockAudio } from "../audio/player";
+import { CHART_COLORS } from "../theme/palette";
+import * as api from "../api/interviewApi";
 import {
     PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis,
     Tooltip, ResponsiveContainer
 } from "recharts";
-
-export const globalAudioContext = new Audio();
-globalAudioContext.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA="; // 1ms silent wav
-
-const CHART_COLORS = ["#00cfff", "#6aa0ff", "#00e5a0", "#3d7fff", "#f59e0b", "#a855f7", "#84cc16"];
 
 const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
@@ -25,8 +22,7 @@ const CustomTooltip = ({ active, payload }) => {
 
 const Landing = () => {
     const navigate = useNavigate();
-    const API_URL = process.env.REACT_APP_API_URL || "https://codeide-backend.mangopebble-d7a787f1.centralindia.azurecontainerapps.io";
-    const { session, userId, startSession, setResumeData, clearSession, hasActiveSession } = useSession();
+    const { session, userId, startSession, setResumeData, hasActiveSession } = useSession();
     const [resumeFile, setResumeFile] = useState(null);
     const [isParsing, setIsParsing] = useState(false);
     const [parsedData, setParsedData] = useState(null);
@@ -40,13 +36,13 @@ const Landing = () => {
         if (!resumeFile) return;
         setIsParsing(true);
         try {
-            const formData = new FormData();
-            formData.append("file", resumeFile);
-            formData.append("session_id", sessionId);
-            formData.append("user_id", userId);
-            const res = await axios.post(`${API_URL}/ai/parse_resume`, formData);
-            if (res.data.success) {
-                const cv = res.data.data || {};
+            const result = await api.parseResume({
+                file: resumeFile,
+                sessionId,
+                userId,
+            });
+            if (result.success) {
+                const cv = result.data || {};
                 setRawData(cv);
                 setResumeData(resumeFile.name, cv);
                 const name = cv.name || "Candidate";
@@ -68,11 +64,10 @@ const Landing = () => {
 
     const handleStartInterview = async () => {
         startSession(sessionId);
-        try { 
-            globalAudioContext.src = "data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YQAAAAA=";
-            globalAudioContext.load();
-            globalAudioContext.play().catch(e => console.warn("Audio unlock prevented", e)); 
-        } catch(e){}
+
+        // Unlock audio inside this click so the interviewer can speak later.
+        await unlockAudio();
+
         navigate(`/topics?session=${sessionId}`);
     };
 

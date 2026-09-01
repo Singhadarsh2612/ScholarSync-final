@@ -5,8 +5,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 
-MARKS_API = "https://student-portal-2-gh1j.onrender.com/api/student/69abdbea843e1db183a2b20f/marks"
-ATTENDANCE_API = "https://student-portal-2-gh1j.onrender.com/api/student/69abdbea843e1db183a2b20f/attendance"
+from endpoints import MARKS_URL as MARKS_API, ATTENDANCE_URL as ATTENDANCE_API
 
 
 def fetch_student_data():

@@ -5,37 +5,28 @@ import subprocess
 import tempfile
 import azure.cognitiveservices.speech as speechsdk
 
-from fastapi import FastAPI, HTTPException, UploadFile, File
-from fastapi.middleware.cors import CORSMiddleware
+from typing import Literal
 
-from app.graph_builder import build_graph
-from app.schemas import CodeUpdatePayload, RunCodePayload, AIRequestPayload, ChatRequestPayload
-from app.problems import problems
-from app.services.llm import get_llm
-from cv_parser import *
+from fastapi import APIRouter, HTTPException, UploadFile, File
+
+from interview.app.graph_builder import build_graph
+from interview.app.schemas import CodeUpdatePayload, RunCodePayload, AIRequestPayload, ChatRequestPayload
+from interview.app.problems import problems
+from interview.app.services.llm import get_llm
+from interview.cv_parser import CVParser
 
 from langchain_core.messages import SystemMessage, HumanMessage
 
-app = FastAPI()
-
-from app.proctoring.router import router as proctoring_router
-
-app.include_router(proctoring_router, prefix="/api/ai", tags=["proctoring"])
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Mounted by the main hub (see server.py) under the /interview prefix.
+# CORS is configured once on the parent app, not here.
+router = APIRouter()
 
 graph = build_graph(checkpointer=None)
 
 _resume_cache: dict = {}
 
 
-@app.get("/api/problem/{problem_id}")
+@router.get("/api/problem/{problem_id}")
 def get_problem(problem_id: int):
     problem = problems.get(problem_id)
     if not problem:
@@ -44,7 +35,7 @@ def get_problem(problem_id: int):
     return {k: v for k, v in problem.items() if k != "solution"}
 
 
-@app.get("/api/questions/topics")
+@router.get("/api/questions/topics")
 def get_topics():
     topics_list = []
     for pid, p in problems.items():
@@ -64,7 +55,7 @@ def get_topics():
     return {"topics": topics_list}
 
 
-@app.get("/api/questions/{topic}")
+@router.get("/api/questions/{topic}")
 def get_questions_by_topic(topic: str):
     slug = topic.lower().replace(" ", "-")
     matched = []
@@ -78,10 +69,10 @@ def get_questions_by_topic(topic: str):
     return {"topic": slug, "questions": matched, "count": len(matched)}
 
 
-@app.get("/api/topic/{topic_name}")
+@router.get("/api/topic/{topic_name}")
 def get_topic_info(topic_name: str):
     slug = topic_name.lower().replace(" ", "-")
-    from app.services.mongo_services import get_collection
+    from interview.app.services.mongo_services import get_collection
     
     coll = get_collection("interview_sessions")
     if coll is not None:
@@ -105,11 +96,15 @@ def get_topic_info(topic_name: str):
         "improvement_trend": "Not Enough Data"
     }
 
-@app.get("/api/interview_routing")
+@router.get("/api/interview_routing")
 def get_interview_routing():
     try:
-        from app.services.mongo_services import get_collection
-        coll = get_collection("interview_sessions")
+        from interview.app.services.mongo_services import get_collection
+        try:
+            coll = get_collection("interview_sessions")
+        except Exception as db_err:
+            print(f"[interview_routing] Mongo unavailable: {db_err}")
+            coll = None
         
         topic_mappings = [
             {"requested_tag": "greedy", "mongo_slug": "greedy", "prompt_name": "Greedy", "prob_id": 4},
@@ -126,7 +121,14 @@ def get_interview_routing():
             slug = mapping["mongo_slug"]
             prompt_name = mapping["prompt_name"]
             
-            doc = coll.find_one({"question_tag": slug}) if coll is not None else None
+            # The topic list itself is static; only the stats come from Mongo.
+            # A database outage degrades the stats rather than the endpoint.
+            doc = None
+            if coll is not None:
+                try:
+                    doc = coll.find_one({"question_tag": slug})
+                except Exception as db_err:
+                    print(f"[interview_routing] stats lookup failed for {slug}: {db_err}")
             
             att_count = 0
             perf_score = 0
@@ -175,7 +177,7 @@ def get_interview_routing():
 
 
 
-@app.post("/api/run")
+@router.post("/api/run")
 def run_code(payload: RunCodePayload):
     unique_id = uuid.uuid4().hex[:8]
 
@@ -190,7 +192,15 @@ def run_code(payload: RunCodePayload):
         with open(input_path, "w") as f:
             f.write(payload.input)
 
-        if "def " in payload.code or "print(" in payload.code or "import " in payload.code:
+        # Trust the client when it declares the language; only fall back to
+        # sniffing for older callers that omit it.
+        if payload.language:
+            is_python = payload.language == "python"
+        else:
+            is_python = any(marker in payload.code
+                            for marker in ("def ", "print(", "import "))
+
+        if is_python:
             py_path = os.path.join(tmp_dir, f"temp_{unique_id}.py")
             with open(py_path, "w") as f:
                 f.write(payload.code)
@@ -243,7 +253,7 @@ def run_code(payload: RunCodePayload):
                     pass
 
 
-@app.post("/api/ai/parse_resume")
+@router.post("/api/ai/parse_resume")
 async def parse_resume(file: UploadFile = File(...), session_id: str = None, user_id: str = None):
     file_bytes = await file.read()
     file_hash = hashlib.md5(file_bytes).hexdigest()
@@ -259,7 +269,7 @@ async def parse_resume(file: UploadFile = File(...), session_id: str = None, use
             cached_data = json.load(f)
             
         if session_id:
-            from app.services.session_store import load_session, save_session
+            from interview.app.services.session_store import load_session, save_session
             sessions = load_session(session_id)
             if sessions:
                 state = sessions[0]
@@ -283,7 +293,7 @@ async def parse_resume(file: UploadFile = File(...), session_id: str = None, use
         print(f"[RESUME CACHE STORE] {file.filename} ({file_hash[:8]}...) saved to {cache_file}")
 
         if session_id:
-            from app.services.session_store import load_session, save_session
+            from interview.app.services.session_store import load_session, save_session
             sessions = load_session(session_id)
             if sessions:
                 state = sessions[0]
@@ -300,7 +310,7 @@ async def parse_resume(file: UploadFile = File(...), session_id: str = None, use
             os.remove(tmp_path)
 
 
-@app.post("/api/ai/welcome")
+@router.post("/api/ai/welcome")
 def ai_welcome(payload: AIRequestPayload):
     problem = problems.get(payload.problemId)
     if not problem:
@@ -308,7 +318,7 @@ def ai_welcome(payload: AIRequestPayload):
         
     welcome_text = f"Hi, I'm your interviewer. Let's solve {problem['title']}. Start when you're ready."
     
-    from app.services.speech_service import text_to_speech_base64
+    from interview.app.services.speech_service import text_to_speech_base64
     audio_base64 = None
     try:
         audio_base64 = text_to_speech_base64(welcome_text)
@@ -321,14 +331,14 @@ def ai_welcome(payload: AIRequestPayload):
     }
 
 
-@app.post("/api/ai/chat")
+@router.post("/api/ai/chat")
 def ai_chat(payload: ChatRequestPayload):
     from langchain_core.messages import AIMessage as LCAIMessage
     problem = problems.get(payload.problemId)
     if not problem:
         raise HTTPException(status_code=404, detail="Problem not found")
 
-    from app.services.session_store import load_session
+    from interview.app.services.session_store import load_session
     session_data = {}
     if payload.session_id:
         sessions = load_session(payload.session_id)
@@ -389,7 +399,7 @@ def ai_chat(payload: ChatRequestPayload):
 
         response = llm.invoke(messages)
 
-        from app.services.speech_service import text_to_speech_base64
+        from interview.app.services.speech_service import text_to_speech_base64
         audio_base64 = None
         try:
             audio_base64 = text_to_speech_base64(response.content)
@@ -402,13 +412,64 @@ def ai_chat(payload: ChatRequestPayload):
         return {"feedback": "I'm sorry, I'm having trouble processing that.", "audio": None}
 
 
-@app.post("/api/ai/{ai_type}")
-def ai_endpoint(ai_type: str, payload: AIRequestPayload):
+@router.post("/api/ai/stt")
+async def speech_to_text_endpoint(file: UploadFile = File(...)):
+   
+    unique_id = uuid.uuid4().hex[:8]
+    tmp_path = os.path.join(tempfile.gettempdir(), f"audio_{unique_id}.wav")
+    
+    try:
+        with open(tmp_path, "wb") as f:
+            f.write(await file.read())
+            
+        from interview.app.services.speech_service import get_speech_config
+        speech_config = get_speech_config()
+        if not speech_config:
+            return {"text": "", "error": "Azure Speech disabled: missing credentials."}
+            
+        audio_config = speechsdk.audio.AudioConfig(filename=tmp_path)
+        recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
+        
+        result = recognizer.recognize_once_async().get()
+        if result.reason == speechsdk.ResultReason.RecognizedSpeech:
+            return {"text": result.text}
+        else:
+            return {"text": "", "error": str(result.reason)}
+            
+    except Exception as e:
+        return {"text": "", "error": str(e)}
+    finally:
+        if os.path.exists(tmp_path):
+            os.remove(tmp_path)
+
+
+@router.post("/api/ai/warning_tts")
+def ai_warning_tts(payload: dict):
+    from interview.app.services.speech_service import text_to_speech_base64
+    audio_base64 = None
+    try:
+        text = payload.get("text", "")
+        audio_base64 = text_to_speech_base64(text)
+    except Exception as e:
+        print(f"[SPEECH ERROR] Warning TTS failed: {e}")
+    return {"audio": audio_base64}
+
+
+from interview.app.services.session_store import load_session
+
+# NOTE: declared AFTER every specific /api/ai/* route on purpose.
+# Starlette matches routes in registration order and compares path shape
+# only, so this pattern would otherwise swallow /api/ai/stt and
+# /api/ai/warning_tts. The Literal below is a second line of defence: it
+# rejects unknown modes cleanly instead of running them as an evaluation.
+@router.post("/api/ai/{ai_type}")
+def ai_endpoint(ai_type: Literal["periodic", "hint", "evaluation"],
+                payload: AIRequestPayload):
     problem = problems.get(payload.problemId)
     if not problem:
         raise HTTPException(status_code=404, detail="Problem not found")
 
-    from app.services.session_store import load_session, save_session
+    from interview.app.services.session_store import load_session, save_session
     session_data = {}
     if payload.session_id:
         sessions = load_session(payload.session_id)
@@ -564,7 +625,7 @@ def ai_endpoint(ai_type: str, payload: AIRequestPayload):
                 "eval_history": eval_history
             }
             save_session(state_to_save)
-        from app.services.speech_service import text_to_speech_base64
+        from interview.app.services.speech_service import text_to_speech_base64
         audio_base64 = None
         try:
             audio_base64 = text_to_speech_base64(final_feedback)
@@ -582,52 +643,7 @@ def ai_endpoint(ai_type: str, payload: AIRequestPayload):
 
 
 
-@app.post("/api/ai/stt")
-async def speech_to_text_endpoint(file: UploadFile = File(...)):
-   
-    unique_id = uuid.uuid4().hex[:8]
-    tmp_path = os.path.join(tempfile.gettempdir(), f"audio_{unique_id}.wav")
-    
-    try:
-        with open(tmp_path, "wb") as f:
-            f.write(await file.read())
-            
-        from app.services.speech_service import get_speech_config
-        speech_config = get_speech_config()
-        if not speech_config:
-            return {"text": "", "error": "Azure Speech disabled: missing credentials."}
-            
-        audio_config = speechsdk.audio.AudioConfig(filename=tmp_path)
-        recognizer = speechsdk.SpeechRecognizer(speech_config=speech_config, audio_config=audio_config)
-        
-        result = recognizer.recognize_once_async().get()
-        if result.reason == speechsdk.ResultReason.RecognizedSpeech:
-            return {"text": result.text}
-        else:
-            return {"text": "", "error": str(result.reason)}
-            
-    except Exception as e:
-        return {"text": "", "error": str(e)}
-    finally:
-        if os.path.exists(tmp_path):
-            os.remove(tmp_path)
-
-
-@app.post("/api/ai/warning_tts")
-def ai_warning_tts(payload: dict):
-    from app.services.speech_service import text_to_speech_base64
-    audio_base64 = None
-    try:
-        text = payload.get("text", "")
-        audio_base64 = text_to_speech_base64(text)
-    except Exception as e:
-        print(f"[SPEECH ERROR] Warning TTS failed: {e}")
-    return {"audio": audio_base64}
-
-
-from app.services.session_store import load_session
-
-@app.post("/api/update_code")
+@router.post("/api/update_code")
 def update_code(payload: CodeUpdatePayload):
     past_sessions = load_session(payload.session_id)
     
@@ -656,7 +672,7 @@ def update_code(payload: CodeUpdatePayload):
 
     result = graph.invoke(state)
     
-    from app.services.session_store import save_session
+    from interview.app.services.session_store import save_session
     save_session(result)
     
     serializable_messages = []
@@ -675,9 +691,9 @@ def update_code(payload: CodeUpdatePayload):
     }
 
 
-@app.get("/api/session/{session_id}/analysis")
+@router.get("/api/session/{session_id}/analysis")
 def get_session_analysis(session_id: str):
-    from app.services.session_store import load_session
+    from interview.app.services.session_store import load_session
     past_sessions = load_session(session_id)
     if not past_sessions:
         return {"analysis": "Session not found.", "progress_scores": []}
@@ -693,10 +709,10 @@ def get_session_analysis(session_id: str):
     }
 
 
-@app.get("/api/candidate/history")
+@router.get("/api/candidate/history")
 def get_candidate_history(user_id: str):
-    from app.services.session_store import load_candidate_history
-    from app.services.llm import get_llm
+    from interview.app.services.session_store import load_candidate_history
+    from interview.app.services.llm import get_llm
     from langchain_core.messages import SystemMessage, HumanMessage
     
     history = load_candidate_history(user_id)

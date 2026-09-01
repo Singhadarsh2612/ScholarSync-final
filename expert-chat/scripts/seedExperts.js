@@ -5,13 +5,10 @@
 
 require('dotenv').config();
 const mongoose = require('mongoose');
-const dns = require('dns');
-
-dns.setServers(['8.8.8.8', '8.8.4.4']);
 
 const Expert = require('../models/Expert');
 
-const MONGO_URI = process.env.MONGO_URI || 'mongodb://localhost:27017/scholarsync_chat';
+const { MONGO_URI } = require('../config/env');
 
 const experts = [
   {
@@ -100,7 +97,6 @@ const seed = async () => {
   try {
     await mongoose.connect(MONGO_URI);
     console.log('✅ Connected to MongoDB');
-    console.log("🔗 Connecting to:", process.env.MONGO_URI || process.env.MONGODB_URI);
     await Expert.deleteMany({});
     console.log('🗑️  Cleared existing experts');
 

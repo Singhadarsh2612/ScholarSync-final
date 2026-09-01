@@ -1,7 +1,9 @@
 import requests
 
-EXAMS_API = "https://student-portal-2-gh1j.onrender.com/api/student/69abdbea843e1db183a2b20f/exam-schedule"
-ASSIGNMENTS_API = "https://student-portal-2-gh1j.onrender.com/api/student/69abdbea843e1db183a2b20f/assignments"
+from endpoints import (
+    EXAM_SCHED_URL as EXAMS_API,
+    PORTAL_2_ASSIGNMENTS_URL as ASSIGNMENTS_API,
+)
 
 
 def fetch_exam_schedule():

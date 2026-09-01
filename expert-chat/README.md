@@ -21,66 +21,65 @@ A real-time chat + video conferencing platform built with the MERN stack, design
 ## 📁 Folder Structure
 
 ```
-scholarsync-chat/
-├── backend/
-│   ├── config/
-│   │   ├── db.js               # MongoDB connection
-│   │   └── socket.js           # Socket.IO event handlers
-│   ├── controllers/
-│   │   ├── authController.js   # Expert login/logout/profile
-│   │   ├── chatController.js   # Rooms, messages, file upload
-│   │   ├── connectController.js# ScholarSync integration API
-│   │   └── expertController.js # Public expert listing
-│   ├── middleware/
-│   │   ├── authMiddleware.js   # JWT verification
-│   │   └── uploadMiddleware.js # Multer file handling
-│   ├── models/
-│   │   ├── Expert.js           # Expert schema
-│   │   ├── ChatRoom.js         # Room schema
-│   │   └── Message.js          # Message schema
-│   ├── routes/
-│   │   ├── authRoutes.js
-│   │   ├── chatRoutes.js
-│   │   ├── connectRoutes.js    # GET /api/connect?subject=...
-│   │   └── expertRoutes.js
-│   ├── scripts/
-│   │   └── seedExperts.js      # Seeds all 10 experts
-│   ├── uploads/                # Uploaded files stored here
-│   ├── .env.example
-│   ├── package.json
-│   └── server.js               # Entry point
-│
-└── frontend/
-    ├── public/
-    │   └── index.html
-    ├── src/
-    │   ├── components/
-    │   │   ├── Chat/
-    │   │   │   ├── ChatPanel.js        # Chat UI + file upload
-    │   │   │   └── ChatPanel.module.css
-    │   │   └── Video/
-    │   │       ├── VideoPanel.js       # WebRTC video UI
-    │   │       └── VideoPanel.module.css
-    │   ├── context/
-    │   │   ├── AuthContext.js          # Expert auth state
-    │   │   └── SocketContext.js        # Socket.IO connection
-    │   ├── hooks/
-    │   │   └── useWebRTC.js            # WebRTC logic
-    │   ├── pages/
-    │   │   ├── LoginPage.js            # Expert login
-    │   │   ├── LoginPage.module.css
-    │   │   ├── DashboardPage.js        # Expert dashboard
-    │   │   ├── DashboardPage.module.css
-    │   │   ├── ChatRoomPage.js         # Main chat + video room
-    │   │   └── ChatRoomPage.module.css
-    │   ├── styles/
-    │   │   └── globals.css             # Design system + CSS vars
-    │   ├── utils/
-    │   │   └── api.js                  # Axios instance
-    │   ├── App.js
-    │   └── index.js
-    ├── .env.example
-    └── package.json
+expert-chat/                    # this folder
+├── config/
+│   ├── db.js               # MongoDB connection
+│   └── socket.js           # Socket.IO event handlers
+├── controllers/
+│   ├── authController.js   # Expert login/logout/profile
+│   ├── chatController.js   # Rooms, messages, file upload
+│   ├── connectController.js# ScholarSync integration API
+│   └── expertController.js # Public expert listing
+├── middleware/
+│   ├── authMiddleware.js   # JWT verification
+│   └── uploadMiddleware.js # Multer file handling
+├── models/
+│   ├── Expert.js           # Expert schema
+│   ├── ChatRoom.js         # Room schema
+│   └── Message.js          # Message schema
+├── routes/
+│   ├── authRoutes.js
+│   ├── chatRoutes.js
+│   ├── connectRoutes.js    # GET /api/connect?subject=...
+│   └── expertRoutes.js
+├── scripts/
+│   └── seedExperts.js      # Seeds all 10 experts
+├── uploads/                # Uploaded files stored here
+├── .env.example
+├── package.json
+└── server.js               # Entry point
+
+expert-chat-ui/                 # sibling folder at the repo root
+├── public/
+│   └── index.html
+├── src/
+│   ├── components/
+│   │   ├── Chat/
+│   │   │   ├── ChatPanel.js        # Chat UI + file upload
+│   │   │   └── ChatPanel.module.css
+│   │   └── Video/
+│   │       ├── VideoPanel.js       # WebRTC video UI
+│   │       └── VideoPanel.module.css
+│   ├── context/
+│   │   ├── AuthContext.js          # Expert auth state
+│   │   └── SocketContext.js        # Socket.IO connection
+│   ├── hooks/
+│   │   └── useWebRTC.js            # WebRTC logic
+│   ├── pages/
+│   │   ├── LoginPage.js            # Expert login
+│   │   ├── LoginPage.module.css
+│   │   ├── DashboardPage.js        # Expert dashboard
+│   │   ├── DashboardPage.module.css
+│   │   ├── ChatRoomPage.js         # Main chat + video room
+│   │   └── ChatRoomPage.module.css
+│   ├── styles/
+│   │   └── globals.css             # Design system + CSS vars
+│   ├── utils/
+│   │   └── api.js                  # Axios instance
+│   ├── App.js
+│   └── index.js
+├── .env.example
+└── package.json
 ```
 
 ---
@@ -97,30 +96,33 @@ scholarsync-chat/
 ### 1. Clone & Install
 
 ```bash
-# Install backend dependencies
-cd backend
-npm install
-
-# Install frontend dependencies
-cd ../frontend
-npm install
+# From the repository root
+npm --prefix expert-chat install
+npm --prefix expert-chat-ui install
 ```
+
+> Both halves live at the repository root as `expert-chat/` (API) and
+> `expert-chat-ui/` (client), matching the `interview/` + `interview-ui/`
+> pairing used by the rest of the project.
 
 ---
 
 ### 2. Environment Variables
 
-**Backend** — create `backend/.env`:
+**API** — create `expert-chat/.env` (or copy `.env.example`):
 
 ```env
 PORT=5000
 MONGO_URI=mongodb://localhost:27017/scholarsync_chat
-JWT_SECRET=your_super_secret_key_change_this
+# REQUIRED — the server refuses to boot without it.
+# Generate with: openssl rand -hex 32
+JWT_SECRET=
 CLIENT_URL=http://localhost:3000
+SERVER_URL=http://localhost:5000
 NODE_ENV=development
 ```
 
-**Frontend** — create `frontend/.env`:
+**Client** — create `expert-chat-ui/.env`:
 
 ```env
 REACT_APP_API_URL=http://localhost:5000
@@ -132,8 +134,7 @@ REACT_APP_SOCKET_URL=http://localhost:5000
 ### 3. Seed the 10 Experts
 
 ```bash
-cd backend
-node scripts/seedExperts.js
+node expert-chat/scripts/seedExperts.js   # or: npm run seed:experts
 ```
 
 This creates all 10 subject experts. Default password for all: `expert@123`
@@ -160,15 +161,13 @@ Expert emails follow the pattern `<subject>.expert@scholarsync.com`:
 **Terminal 1 — Backend:**
 
 ```bash
-cd backend
-npm run dev
+npm --prefix expert-chat run dev
 ```
 
 **Terminal 2 — Frontend:**
 
 ```bash
-cd frontend
-npm start
+npm --prefix expert-chat-ui start
 ```
 
 - Frontend: http://localhost:3000
@@ -303,7 +302,7 @@ Supported file types:
 
 Max file size: **10 MB**
 
-Files are stored in `backend/uploads/`. For production, swap Multer's disk storage for **AWS S3** or **Cloudinary** by updating `uploadMiddleware.js`.
+Files are stored in `expert-chat/uploads/`. For production, swap Multer's disk storage for **AWS S3** or **Cloudinary** by updating `uploadMiddleware.js`.
 
 ---
 
@@ -311,7 +310,7 @@ Files are stored in `backend/uploads/`. For production, swap Multer's disk stora
 
 ### Add a new expert
 
-Edit `backend/scripts/seedExperts.js` and add to the `experts` array:
+Edit `expert-chat/scripts/seedExperts.js` and add to the `experts` array:
 
 ```js
 {
