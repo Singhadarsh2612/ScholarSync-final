@@ -186,6 +186,18 @@ def _live_report():
         print(f"  {'OK     ' if ok else 'MISSING'} {role:24} {name}{note}")
 
 
+# Capabilities the app cannot run without. Speech and Search degrade
+# gracefully at runtime; a chat model and embeddings do not.
+REQUIRED = ("chat (llm_mini_1)", "chat (llm_4o)", "embeddings",
+            "azure ai search")
+
+
+def missing_required():
+    """Names of required capabilities with no credentials resolved."""
+    return [name for name, (ok, _) in credential_report().items()
+            if name in REQUIRED and not ok]
+
+
 if __name__ == "__main__":
     import sys
 
@@ -198,3 +210,18 @@ if __name__ == "__main__":
         _live_report()
     else:
         print("\n(credentials only — run with --live to check deployment names)")
+
+    # --strict makes this a usable CI gate. Without it the report printed
+    # MISSING and still exited 0, so a run with no secrets configured reached
+    # the suite and failed as a dozen confusing per-case errors instead of one
+    # clear message.
+    if "--strict" in sys.argv:
+        gaps = missing_required()
+        if gaps:
+            print("\nFAIL: required credentials are not configured:")
+            for name in gaps:
+                print(f"  - {name}")
+            print("\nIn CI these come from repository secrets:"
+                  " Settings -> Secrets and variables -> Actions.")
+            raise SystemExit(1)
+        print("\nOK: all required credentials resolved.")

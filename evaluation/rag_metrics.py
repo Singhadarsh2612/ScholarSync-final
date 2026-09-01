@@ -97,7 +97,14 @@ def retrieve(question, assignment_url):
     """
     from assignment_solver import index_document, _vector_search
 
-    doc_key = index_document(assignment_url)
+    # index_document raises outright when Azure AI Search is unconfigured, so
+    # it has to be inside the guard: a missing credential should fail this one
+    # case, not abort the whole suite with a traceback.
+    try:
+        doc_key = index_document(assignment_url)
+    except Exception as exc:
+        return None, f"indexing failed -- {type(exc).__name__}: {exc}"[:220]
+
     if not doc_key:
         return None, "indexing failed (check embeddings and Azure AI Search)"
     try:

@@ -82,9 +82,13 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Report resolved credentials
-        # Prints names and which capabilities resolve, never secret values.
-        run: python azure_env.py --live
+      - name: Check credentials
+        # --strict exits 1 with the missing capabilities named, so a run with
+        # unset secrets fails here with one clear message instead of reaching
+        # the suite and failing as a dozen per-case errors. --live also
+        # verifies each deployment name exists in Azure. Prints names and
+        # which capabilities resolve, never secret values.
+        run: python azure_env.py --live --strict
 
       - name: Observability status
         run: python -m observability.status

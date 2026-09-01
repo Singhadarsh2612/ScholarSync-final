@@ -42,10 +42,12 @@ class _LazyLLM:
 
         if not endpoint or not api_key:
             missing = "endpoint" if not endpoint else "API key"
+            shared = "AZURE_OPENAI_ENDPOINT / AZURE_OPENAI_API_KEY"
+            hint = self._hint if self._hint != shared else shared
+            fallback = "" if self._hint == shared else f" (or {shared})"
             raise RuntimeError(
                 f"Cannot build LLM '{self._name}': no {missing} resolved. Set "
-                f"{self._hint} (or AZURE_OPENAI_ENDPOINT / "
-                f"AZURE_OPENAI_API_KEY) in .env. Run `python azure_env.py`."
+                f"{hint}{fallback} in .env. Run `python azure_env.py`."
             )
 
         return AzureChatOpenAI(
