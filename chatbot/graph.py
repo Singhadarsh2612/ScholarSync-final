@@ -22,6 +22,7 @@ from typing import Annotated, TypedDict
 from langchain_core.messages import BaseMessage
 from langgraph.graph import StateGraph, START, END
 
+import observability
 from chatbot.agents import critic_node
 from chatbot.swarm_agents import (
     complexity_analyzer_node,
@@ -84,17 +85,27 @@ def route_critic(state: MultiAgentState):
 
 builder = StateGraph(MultiAgentState)
 
-builder.add_node("ComplexityAnalyzer",   complexity_analyzer_node)
-builder.add_node("SimpleRetriever",      simple_retriever_node)
-builder.add_node("Planner",              planner_node)
-builder.add_node("ToolHeavyExplorer",    run_tool_heavy_explorer)
-builder.add_node("MinimalExplorer",      run_minimal_explorer)
-builder.add_node("BalancedExplorer",     run_balanced_explorer)
-builder.add_node("FitnessEvaluator",     fitness_evaluator_node)
-builder.add_node("ExecutorNode",         executor_node)
-builder.add_node("ExploiterNode",        exploiter_node)
-builder.add_node("PresentationAgent",    presentation_agent_node)
-builder.add_node("Critic",               critic_node)
+
+def _add_node(name, fn):
+    """Register a node wrapped in a tracing span.
+
+    Wrapping here rather than decorating each node keeps instrumentation out of
+    the agent code, and observe_node is a pass-through when tracing is off.
+    """
+    builder.add_node(name, observability.observe_node(name)(fn))
+
+
+_add_node("ComplexityAnalyzer",   complexity_analyzer_node)
+_add_node("SimpleRetriever",      simple_retriever_node)
+_add_node("Planner",              planner_node)
+_add_node("ToolHeavyExplorer",    run_tool_heavy_explorer)
+_add_node("MinimalExplorer",      run_minimal_explorer)
+_add_node("BalancedExplorer",     run_balanced_explorer)
+_add_node("FitnessEvaluator",     fitness_evaluator_node)
+_add_node("ExecutorNode",         executor_node)
+_add_node("ExploiterNode",        exploiter_node)
+_add_node("PresentationAgent",    presentation_agent_node)
+_add_node("Critic",               critic_node)
 
 builder.add_edge(START, "ComplexityAnalyzer")
 

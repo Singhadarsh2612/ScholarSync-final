@@ -2,7 +2,7 @@
 <html lang="en">
 
 <head>
-    <link rel="icon" type="image/png" href="/logo.png">
+  <link rel="icon" type="image/png" href="/logo.png">
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ScholarSync — AI Command Center</title>
@@ -13,6 +13,25 @@
       box-sizing: border-box;
       margin: 0;
       padding: 0;
+    }
+
+    button,
+    .acard,
+    .p-chip,
+    .sidebar button,
+    .sb-new,
+    .hist-item,
+    .iframe-back-btn,
+    .ln-link,
+    .ln-cta,
+    .btn-primary,
+    .atb-home-btn,
+    .sd-toggle,
+    .send-btn,
+    .hamburger-btn {
+      -webkit-tap-highlight-color: transparent;
+      touch-action: manipulation;
+      user-select: none;
     }
 
     :root {
@@ -980,19 +999,28 @@
       box-shadow: 0 0 10px var(--mint);
     }
 
-    .anode-4 .an-orb-ring { animation-delay: 1.5s; }
+    .anode-4 .an-orb-ring {
+      animation-delay: 1.5s;
+    }
+
     .anode-4 .an-orb-ring::before {
       background: #e879f9;
       box-shadow: 0 0 10px #e879f9;
     }
 
-    .anode-5 .an-orb-ring { animation-delay: 2s; }
+    .anode-5 .an-orb-ring {
+      animation-delay: 2s;
+    }
+
     .anode-5 .an-orb-ring::before {
       background: #fbbf24;
       box-shadow: 0 0 10px #fbbf24;
     }
 
-    .anode-6 .an-orb-ring { animation-delay: 2.5s; }
+    .anode-6 .an-orb-ring {
+      animation-delay: 2.5s;
+    }
+
     .anode-6 .an-orb-ring::before {
       background: #f472b6;
       box-shadow: 0 0 10px #f472b6;
@@ -3511,7 +3539,8 @@
         <div class="feat-card fc-a">
           <div class="feat-ico" style="background:rgba(16,96,240,.1);">📅</div>
           <div class="feat-name">Calendar & Email Sync</div>
-          <p class="feat-desc">Seamlessly manage Google Calendar events and dispatch formatted emails to professors or peers directly from chat.</p>
+          <p class="feat-desc">Seamlessly manage Google Calendar events and dispatch formatted emails to professors or
+            peers directly from chat.</p>
         </div>
         <div class="feat-card fc-b">
           <div class="feat-ico" style="background:rgba(0,207,255,.1);">🧩</div>
@@ -3540,7 +3569,8 @@
         <div class="feat-card fc-f">
           <div class="feat-ico" style="background:rgba(56,189,248,.1);">✉️</div>
           <div class="feat-name">EduSync</div>
-          <p class="feat-desc">Keeps you upfront and fully updated on current deadlines, official exam schedules, and syllabus changes.</p>
+          <p class="feat-desc">Keeps you upfront and fully updated on current deadlines, official exam schedules, and
+            syllabus changes.</p>
         </div>
       </div>
     </section>
@@ -3551,7 +3581,8 @@
     <section class="l-cta" id="sec-cta">
       <div class="sec-kicker">Get Started</div>
       <h2 class="cta-title">Your academic workflow,<br><span class="cta-grad">fully automated.</span></h2>
-      <p class="cta-sub" style="color: rgba(200, 220, 255, 0.85);">All agents are initialized and ready. Deadlines, assignments, study plans, and interview
+      <p class="cta-sub" style="color: rgba(200, 220, 255, 0.85);">All agents are initialized and ready. Deadlines,
+        assignments, study plans, and interview
         preparation — handled end to end.</p>
       <button class="btn-primary" style="font-size:14px;padding:15px 42px;" onclick="enterApp()">Launch System
         →</button>
@@ -3844,8 +3875,10 @@
               <div class="p-chip" onclick="fillInput('what are my study materials')">what are my study materials</div>
               <div class="p-chip" onclick="fillInput('start a greedy interview')">start a greedy interview</div>
               <div class="p-chip" onclick="fillInput('what are marks of CN')">what are marks of CN</div>
-              <div class="p-chip" onclick="fillInput('am i short on attendace in any subject')">am i short on attendace in any subject</div>
-              <div class="p-chip" onclick="fillInput('can you connect me with someone proficient in CN?')">connect me with someone proficient in CN</div>
+              <div class="p-chip" onclick="fillInput('am i short on attendace in any subject')">am i short on attendace
+                in any subject</div>
+              <div class="p-chip" onclick="fillInput('can you connect me with someone proficient in CN?')">connect me
+                with someone proficient in CN</div>
             </div>
           </div>
         </div>

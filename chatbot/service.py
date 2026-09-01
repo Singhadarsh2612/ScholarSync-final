@@ -13,33 +13,20 @@ Changes from previous version:
 
 import asyncio
 import json
-import os
-from contextlib import nullcontext
 
 from langchain_core.messages import HumanMessage
-from langsmith import traceable
-from langchain_core.tracers.context import tracing_v2_enabled
 
+import observability
 
-def _trace_ctx():
-    """Enable LangSmith tracing only when a key is configured.
-
-    config.py sets LANGCHAIN_TRACING_V2=false without a key, but
-    tracing_v2_enabled() force-enables tracing regardless, so every chat
-    request used to fire an upload that 401'd and flooded the logs.
-    """
-    if not os.getenv("LANGCHAIN_API_KEY"):
-        return nullcontext()
-    return tracing_v2_enabled(
-        project_name=os.getenv("LANGCHAIN_PROJECT", "ScholarSync")
-    )
+# Sets LANGCHAIN_TRACING_V2 from whether a key exists. Without this the SDK
+# attempts an upload per request and 401s.
+observability.init()
 
 from . import memory
 from .config import threads
 from .ui_builders import build_ui_block, get_ui_tool_name
 
 
-@traceable(name="ScholarSync Chat")
 async def chat_stream(user_message: str, thread_id: str):
     if thread_id not in threads:
         threads[thread_id] = user_message[:30]
@@ -47,7 +34,7 @@ async def chat_stream(user_message: str, thread_id: str):
     state  = {"messages": [HumanMessage(content=user_message)]}
     config = {"configurable": {"thread_id": thread_id}}
 
-    with _trace_ctx():
+    with observability.request_trace(user_message, thread_id) as span:
 
         try:
             final_state = await asyncio.wait_for(
@@ -55,15 +42,23 @@ async def chat_stream(user_message: str, thread_id: str):
                 timeout=200,
             )
         except asyncio.TimeoutError:
+            span.set_status("timeout")
             yield "⚠️ The agent took too long to respond. Please try again."
             return
         except Exception as e:
+            span.set_status("error")
+            span.set_response("", error=str(e)[:300])
             yield f"⚠️ An error occurred: {str(e)[:200]}"
             return
 
         final_response: str = final_state.get("final_response", "")
 
+        tools_called = [r.get("tool") for r in final_state.get("execution_results", [])
+                        if r.get("tool") and not r.get("skipped")]
+
         if not final_response:
+            span.set_status("empty_response")
+            span.set_response("")
             yield "⚠️ The agent was unable to produce a response. Please try again."
             return
 
@@ -103,6 +98,15 @@ async def chat_stream(user_message: str, thread_id: str):
                 print(f"[UI] WARNING: No raw_data found for {tool_name}")
 
         output_text = (ui_block + "\n\n" + final_response).strip() if ui_block else final_response
+
+        span.set_status("ok")
+        span.set_response(
+            output_text,
+            tools_called=tools_called,
+            complexity=final_state.get("complexity"),
+            critic_iterations=final_state.get("critic_iterations"),
+            ui_type=(final_state.get("ui_requirement") or {}).get("type"),
+        )
 
         yield "\n\n**Agent Network**:\n"
         chunk_size = 15

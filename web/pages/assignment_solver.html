@@ -223,6 +223,23 @@ html, body {
   letter-spacing: .05em;
 }
 .asgn-card.active .asgn-tag { background: rgba(0,207,255,.1); border-color: rgba(0,207,255,.3); color: var(--electric); }
+.asgn-meta { display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.asgn-state {
+  display: inline-flex; align-items: center;
+  border-radius: 100px; padding: 2px 8px;
+  font-family: var(--font-m); font-size: 8.5px; letter-spacing: .08em;
+  text-transform: uppercase; white-space: nowrap;
+}
+.asgn-state.upcoming  { background: rgba(16,96,240,.14);  border: 1px solid rgba(61,127,255,.3);  color: var(--azure-l); }
+.asgn-state.overdue   { background: rgba(255,86,86,.12);  border: 1px solid rgba(255,86,86,.32);  color: #ff9a9a; }
+.asgn-state.completed { background: rgba(46,204,113,.12); border: 1px solid rgba(46,204,113,.32); color: #7ee2a8; }
+.asgn-group {
+  font-family: var(--font-m); font-size: 8.5px; letter-spacing: .16em;
+  text-transform: uppercase; color: var(--t3);
+  margin: 12px 2px 6px; display: flex; align-items: center; gap: 7px;
+}
+.asgn-group:first-child { margin-top: 0; }
+.asgn-group::after { content: ''; flex: 1; height: 1px; background: rgba(61,127,255,.14); }
 
 /* ── Main Panel ── */
 .main {
@@ -594,7 +611,18 @@ async function loadAssignments() {
     let res = await fetch(ASSIGNMENTS_API);
     if (!res.ok) throw new Error("Assignments API failed");
     let data = await res.json();
-    let list = data?.data?.assignments?.upcoming || [];
+    const buckets = data?.data?.assignments || {};
+
+    // The portal splits assignments into upcoming / overdue / completed.
+    // All three are workable here, so show them all rather than only the
+    // upcoming bucket — which is empty whenever every due date has passed.
+    const groups = [
+      { key: "upcoming",  label: "Upcoming"  },
+      { key: "overdue",   label: "Overdue"   },
+      { key: "completed", label: "Completed" }
+    ].map(g => ({ ...g, items: buckets[g.key] || [] }));
+
+    const total = groups.reduce((n, g) => n + g.items.length, 0);
 
     const loadingEl = document.getElementById("loading");
     if (loadingEl) loadingEl.remove();
@@ -602,25 +630,39 @@ async function loadAssignments() {
     let container = document.getElementById("assignment-list");
     const countEl = document.getElementById("asgn-count");
 
-    if (list.length === 0) {
+    if (countEl) countEl.textContent = total;
+
+    if (total === 0) {
       container.innerHTML = '<div class="no-asgn">No assignments found.</div>';
       return;
     }
 
-    if (countEl) countEl.textContent = list.length;
+    container.innerHTML = "";
 
-    list.forEach(a => {
-      let div = document.createElement("div");
-      div.className = "asgn-card";
-      div.innerHTML = `
-        <h4>${a.title}</h4>
-        <span class="asgn-tag">
-          <svg width="8" height="8" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          ${a.subject.name}
-        </span>
-      `;
-      div.onclick = () => selectAssignment(a, div);
-      container.appendChild(div);
+    groups.forEach(g => {
+      if (!g.items.length) return;
+
+      let hdr = document.createElement("div");
+      hdr.className = "asgn-group";
+      hdr.innerHTML = `<span>${g.label} · ${g.items.length}</span>`;
+      container.appendChild(hdr);
+
+      g.items.forEach(a => {
+        let div = document.createElement("div");
+        div.className = "asgn-card";
+        div.innerHTML = `
+          <h4>${a.title}</h4>
+          <div class="asgn-meta">
+            <span class="asgn-tag">
+              <svg width="8" height="8" fill="none" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+              ${a.subject?.name || "General"}
+            </span>
+            <span class="asgn-state ${g.key}">${dueLabel(a, g.key)}</span>
+          </div>
+        `;
+        div.onclick = () => selectAssignment(a, div);
+        container.appendChild(div);
+      });
     });
 
   } catch (err) {
@@ -628,6 +670,16 @@ async function loadAssignments() {
     const loadingEl = document.getElementById("loading");
     if (loadingEl) loadingEl.innerHTML = '<div class="no-asgn">Failed to load assignments.</div>';
   }
+}
+
+/* Short human label for the status pill: "due in 4d", "12d late", "done". */
+function dueLabel(a, key) {
+  if (key === "completed") return "Done";
+  const d = a.daysUntilDue;
+  if (typeof d !== "number") return key;
+  if (d < 0)  return Math.abs(d) + "d late";
+  if (d === 0) return "Due today";
+  return "Due in " + d + "d";
 }
 
 /* ── SELECT ASSIGNMENT ── */

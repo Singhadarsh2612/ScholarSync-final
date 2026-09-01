@@ -25,6 +25,7 @@ from typing import Any
 from langchain_core.messages import SystemMessage, HumanMessage, AIMessage
 
 from chatbot.llm import llm_mini_1, llm_mini_2, llm_4o
+import observability
 from chatbot.raw_tools import TOOL_MAP, KNOWN_TOOL_NAMES, CONFIRMATION_TOOLS, ONCE_ONLY_TOOLS
 from chatbot.prompts import (
     COMPLEXITY_ANALYZER_SYSTEM,
@@ -112,12 +113,16 @@ def _parse_json(text: str) -> dict:
     return {}
 
 
+@observability.observe_llm
 async def _llm_call(llm, system: str, human: str) -> str:
     res = await llm.ainvoke([SystemMessage(content=system),
                               HumanMessage(content=human)])
+    # Token counts live on the response, which is discarded below.
+    observability.record_llm_usage(res)
     return res.content or ""
 
 
+@observability.observe_tool
 async def _call_tool(tool_name: str, params: dict) -> Any:
     fn = TOOL_MAP.get(tool_name)
     if fn is None:

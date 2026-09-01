@@ -69,10 +69,17 @@ def _get(url: str, timeout: int = 55, retries: int = 1):
 
 
 def get_assignments_raw() -> list:
-    """Return list of upcoming assignments as plain dicts."""
+    """Return the student's outstanding assignments as plain dicts.
+
+    Reads the overdue bucket as well as upcoming. Reading only "upcoming" made
+    this return [] whenever every assignment was past its due date, so the
+    agent reported "no assignments" while the portal listed several.
+    """
     try:
         data = _get(_ASSIGNMENTS_URL)
-        items = data.get("data", {}).get("assignments", {}).get("upcoming", [])
+        buckets = data.get("data", {}).get("assignments", {})
+        items = [(a, "overdue") for a in buckets.get("overdue", [])]
+        items += [(a, "upcoming") for a in buckets.get("upcoming", [])]
         return [
             {
                 "title":         a.get("title", "Untitled"),
@@ -80,9 +87,10 @@ def get_assignments_raw() -> list:
                                   else a.get("subject", "Unknown")),
                 "description":   a.get("description", ""),
                 "deadline":      a.get("dueDate", ""),
+                "status":        status,
                 "assignmentDoc": a.get("assignmentDoc", ""),
             }
-            for a in items
+            for a, status in items
         ]
     except Exception as e:
         return [{"error": str(e)}]
@@ -205,11 +213,65 @@ def get_interview_info_raw() -> list:
     ]
 
 
+def _normalise_topic(text: str) -> str:
+    """Fold spaces, hyphens and underscores together and lowercase."""
+    import re
+    return re.sub(r"[\s\-_]+", "_", (text or "").strip().lower())
+
+
+def _resolve_topic(topic: str, mapping: dict):
+    """Best-effort match of a user's phrasing to a stored topic key.
+
+    Exact keys are inconsistent across the system -- Mongo stores
+    "two_pointer" while the topics API serves "two-pointers" -- and users type
+    plurals. Without this, "graphs" and "two pointers" both failed even though
+    both topics exist.
+    """
+    wanted = _normalise_topic(topic)
+    if not wanted:
+        return None
+
+    candidates = {_normalise_topic(k): k for k in mapping}
+
+    if wanted in candidates:
+        return candidates[wanted]
+
+    # Singular/plural on the final word, in both directions.
+    variants = set()
+    if wanted.endswith("s"):
+        variants.add(wanted[:-1])
+    else:
+        variants.add(wanted + "s")
+    parts = wanted.split("_")
+    if parts[-1].endswith("s"):
+        variants.add("_".join(parts[:-1] + [parts[-1][:-1]]))
+    else:
+        variants.add("_".join(parts[:-1] + [parts[-1] + "s"]))
+    for variant in variants:
+        if variant in candidates:
+            return candidates[variant]
+
+    # Containment on de-pluralised word sets, so "graph theory" and "pointers"
+    # both land on their topic.
+    def stems(value):
+        return {w[:-1] if w.endswith("s") and len(w) > 3 else w
+                for w in value.split("_") if w}
+
+    wanted_stems = stems(wanted)
+    for norm, original in candidates.items():
+        if norm in wanted or wanted in norm:
+            return original
+        if wanted_stems & stems(norm):
+            return original
+
+    return None
+
+
 def prepare_interview_session_raw(topic: str = "") -> dict:
     """Return interview URL + performance stats for a given topic."""
     _, _interview_mapping = _interview_state()
-    tag = topic.strip().lower().replace(" ", "_")
-    if tag not in _interview_mapping:
+    tag = _resolve_topic(topic, _interview_mapping)
+    if tag is None:
         available = ", ".join(sorted(_interview_mapping.keys()))
         return {"error": f"Topic '{topic}' not found. Available: {available}"}
     item     = _interview_mapping[tag]

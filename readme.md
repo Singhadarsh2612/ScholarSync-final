@@ -103,6 +103,39 @@ is `expert-chat/`. The names are deliberately distinct for this reason.
 
 ---
 
+### Readability
+
+The codebase is organised so each concern lives in one place and can be read
+without tracing through the rest.
+
+**One source of truth per concern.** `endpoints.py` holds every external URL and
+ID; `azure_env.py` resolves every Azure credential; `observability/config.py`
+holds every tracing setting. Previously the same student-portal URL was written
+out in six files and the same Azure key was read under four different names.
+
+**Credentials resolve through alias chains.** `azure_env.py` accepts several
+spellings per value and falls back to the shared `AZURE_OPENAI_*` pair, so one
+Azure resource serves all three model roles and renaming a variable does not
+mean editing call sites.
+
+**Instrumentation stays out of the agent code.** Nodes are wrapped at
+registration in `chatbot/graph.py`, and the two funnels every LLM and tool call
+passes through (`_llm_call`, `_call_tool`) carry a decorator each. No node body
+contains tracing logic, and `observability` never imports agent code — the
+dependency runs one way.
+
+**Failures degrade instead of cascading.** Missing Postgres falls back to an
+in-memory checkpointer; unreachable Mongo returns `None` from `get_db()`; a
+missing Tavily key disables web search alone rather than the whole MCP server;
+tracing errors are swallowed so observability can never fail a request. Each is
+logged at startup so you know which mode you are in.
+
+**Comments explain why, not what.** Where a line looks odd it says what breaks
+without it — the Windows selector-loop shim in `run.py`, the route ordering in
+`interview/main.py`, the `--quiet` flag on the mongo service.
+
+---
+
 ## 🛠 Tech Stack
 
 | Domain | Technologies |
@@ -159,9 +192,26 @@ scholarsync/
 │       ├── context/         # Auth + Socket providers
 │       └── hooks/           # useWebRTC
 │
-├── *.html, js/, styles.css  # The hub's own dashboards
+├── observability/           # Tracing for every agent response
+│   ├── config.py            # Env-resolved settings; no SDK import
+│   ├── tracing.py           # The only module that imports langsmith
+│   ├── sanitize.py          # Redaction + truncation before upload
+│   └── status.py            # python -m observability.status
+│
+├── evaluation/              # RAG + LLM-as-judge metrics
+│   ├── judge.py             # Shared scoring primitive
+│   ├── rag_metrics.py       # The RAG triad
+│   ├── agent_metrics.py     # Correctness, fabrication, helpfulness, tools
+│   ├── datasets.py          # Golden cases (data only)
+│   └── runner.py            # python -m evaluation.runner
+│
+├── web/                     # The hub's own dashboards
+│   ├── pages/               # scholar_sync, assignment_solver, analysis, …
+│   └── js/                  # Dashboard scripts, served at /js
+│
+├── azure_env.py             # Azure credential resolution (alias chains)
 ├── Dockerfile               # Shared image for the hub and MCP server
-├── docker-compose.yml       # Full stack: 7 services
+├── docker-compose.yml       # Full stack (mongo is behind a `local-db` profile)
 ├── package.json             # Convenience scripts for the three JS apps
 └── .env.example             # Every credential, annotated
 ```
@@ -272,6 +322,92 @@ Missing credentials disable features rather than blocking startup:
 | `MONGO_URI` / Mongo down | Interview topics still listed; scores not recorded |
 | `AZURE_SPEECH_*` | Interviews run text-only, no voice |
 | Azure OpenAI keys | LLM calls fail at request time, not at import |
+
+---
+
+## 🔬 Observability & Evaluation
+
+Every agent response is traced, and both the agent and the RAG pipeline can be
+scored against golden cases.
+
+### Credentials
+
+**One credential enables tracing:**
+
+```bash
+LANGSMITH_API_KEY=lsv2_pt_...      # smith.langchain.com -> Settings -> API keys
+LANGSMITH_PROJECT=ScholarSync      # optional, defaults to ScholarSync
+```
+
+The older `LANGCHAIN_API_KEY` / `LANGCHAIN_PROJECT` names are also accepted.
+Evaluation needs no new credential — it reuses the Azure OpenAI key already in
+`.env` and judges with `GPT4O_DEPLOYMENT` (override via `EVAL_JUDGE_DEPLOYMENT`).
+
+```bash
+python -m observability.status      # is the key set, and does it work?
+```
+
+**With no key set, tracing is a no-op.** Every decorator is a pass-through and
+nothing is uploaded, so the stack runs unchanged without an account.
+
+### What gets traced
+
+One root span per `/chat-stream` request, with children:
+
+```text
+ScholarSync Chat            thread_id, status, latency, tools_called
+├── ComplexityAnalyzer      chain   state snapshot -> update
+│   └── llm:gpt-4.1-mini    llm     prompt, tokens, latency
+├── ExecutorNode            chain
+│   └── tool:get_…_raw      tool    args, result, result_empty
+└── PresentationAgent       chain
+```
+
+`result_empty` exists because a tool returning `[]` is how a real bug presented:
+the agent stated there were no assignments while the portal listed six. An empty
+tool result is now visible in the trace rather than inferred from the answer.
+
+Two settings limit what leaves your infrastructure — `OBS_CAPTURE_CONTENT=false`
+keeps latency, tokens and errors but drops prompt/response text, and
+`OBS_MAX_FIELD_CHARS` truncates. Emails are redacted and any field whose name
+looks like a secret is replaced before upload.
+
+### Evaluation
+
+```bash
+python -m evaluation.runner            # both suites
+python -m evaluation.runner --agent    # agent responses
+python -m evaluation.runner --rag      # RAG triad
+python -m evaluation.runner --case rag-absent-topic
+python -m evaluation.runner --json report.json
+```
+
+**RAG triad** — each metric isolates a different component, so a failure points
+at one place:
+
+| Metric | Question it answers | Blames |
+|---|---|---|
+| `context_relevance` | Did retrieval fetch the right chunks? | Retriever |
+| `faithfulness` | Is every claim supported by those chunks? | Generator |
+| `answer_relevance` | Does the answer address the question? | Generator |
+
+High context relevance with low faithfulness means the model is inventing
+despite good retrieval; the reverse means retrieval is at fault.
+
+**Agent metrics** — `correctness` (against expected facts), `no_fabrication`,
+`helpfulness`, `tool_choice`. Correctness is the one that catches a confident,
+fluent, wrong answer; a generic quality score rates those highly.
+
+Cases live in `evaluation/datasets.py` as data. Three are marked `regression`
+and reproduce bugs that shipped, so a change that reintroduces one fails here:
+
+- `assignments-overdue-os` — the tool read only the `upcoming` bucket
+- `interview-graphs` — exact-match topic lookup missed the plural "graphs"
+- `interview-two-pointers` — Mongo said `two_pointer`, the API said `two-pointers`
+
+The runner exits non-zero when any case scores below `0.7`, so it works as a CI
+gate. Scoring is LLM-as-judge, so treat small differences as noise and watch the
+trend.
 
 ---
 

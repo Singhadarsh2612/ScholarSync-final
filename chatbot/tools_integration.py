@@ -70,16 +70,21 @@ def get_assignments_tool() -> str:
         if r.status_code != 200:
             return "Failed to fetch assignments from the student portal."
         res = r.json()
-        assignments = res.get("data", {}).get("assignments", {}).get("upcoming", [])
+        buckets = res.get("data", {}).get("assignments", {})
+        # Overdue first: reading only "upcoming" reported nothing whenever every
+        # assignment was already past its due date.
+        assignments = ([(a, "overdue") for a in buckets.get("overdue", [])]
+                       + [(a, "upcoming") for a in buckets.get("upcoming", [])])
         if not assignments:
-            return "No upcoming assignments found."
+            return "No outstanding assignments found."
         result = []
-        for a in assignments:
+        for a, status in assignments:
             result.append({
                 "title": a.get("title", "Untitled"),
                 "subject": a.get("subject", {}).get("name", "Unknown") if isinstance(a.get("subject"), dict) else a.get("subject", "Unknown"),
                 "description": a.get("description", "No description provided"),
                 "due_date": a.get("dueDate", "No due date"),
+                "status": status,
                 "document_url": a.get("assignmentDoc", "")
             })
         return json.dumps(result, indent=2)

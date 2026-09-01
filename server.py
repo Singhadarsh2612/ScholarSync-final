@@ -19,6 +19,7 @@ from fastapi.responses import FileResponse
 
 
 import os
+from pathlib import Path
 
 _AUTH_EMAIL    = os.getenv("ADMIN_EMAIL", "scholarsync26@gmail.com")
 _AUTH_PASSWORD = os.getenv("ADMIN_PASSWORD", "scholarsync26")
@@ -80,27 +81,38 @@ def auth_login(req: LoginRequest):
 
 
 
+# ── Web assets ──────────────────────────────────────────────────────────────
+# Resolved against this file so the pages load whatever the working directory
+# is. The URL paths are unchanged, so the HTML's own "js/main.js" still works.
+WEB_DIR = Path(__file__).resolve().parent / "web"
+PAGES_DIR = WEB_DIR / "pages"
+
+
+def _page(filename: str) -> str:
+    return str(PAGES_DIR / filename)
+
+
 @app.get("/")
 def serve_ui():
-    return FileResponse("scholar_sync.html")
+    return FileResponse(_page("scholar_sync.html"))
 
 @app.get("/assignment-solver")
 def serve_assignment_solver():
-    return FileResponse("assignment_solver.html")
+    return FileResponse(_page("assignment_solver.html"))
 
 @app.get("/material-view")
 def serve_material_view():
-    return FileResponse("material_view.html")
+    return FileResponse(_page("material_view.html"))
 
 @app.get("/deadlines")
 def serve_deadlines():
-    return FileResponse("index.html")
+    return FileResponse(_page("index.html"))
 
 @app.get("/sync-db")
 def serve_sync_db():
     return FileResponse("chatbot/sync/sync_db.json", media_type="application/json")
 
-app.mount("/js", StaticFiles(directory="js"), name="js")
+app.mount("/js", StaticFiles(directory=str(WEB_DIR / "js")), name="js")
 
 @app.get("/logo.png")
 def serve_logo():
@@ -201,7 +213,7 @@ def analysis():
 
 @app.get("/analysis-dashboard")
 def analysis_dashboard():
-    return FileResponse("analysis.html")
+    return FileResponse(_page("analysis.html"))
 
 
 
