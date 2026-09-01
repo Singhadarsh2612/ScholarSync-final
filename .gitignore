@@ -6,7 +6,17 @@ __pycache__/
 venv/
 
 # Environment variables
+# `.env` alone matches only that exact name, so a `.env.bak` / `.env.local` /
+# `.env.production` would have been tracked with real keys in it. Ignore every
+# variant and re-include the documented template.
 .env
+.env.*
+!.env.example
+
+# Google service-account private key, read by
+# chatbot/mcp_server/calendar_auth.py when GOOGLE_SERVICE_ACCOUNT_JSON is unset.
+service-account.json
+**/service-account.json
 
 # Node
 node_modules/

@@ -12,6 +12,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_openai import AzureChatOpenAI,AzureOpenAIEmbeddings
 
+import azure_env
+
 load_dotenv()
 
 # Resolved against this file, not the process CWD, so the index location does
@@ -28,17 +30,17 @@ class CVParser:
         )
 
         self.embeddings = AzureOpenAIEmbeddings(
-            azure_deployment=os.getenv("AZURE_EMBEDDING_DEPLOYMENT", "text-embedding-3-small"),
-            azure_endpoint=os.getenv("AZURE_EMBEDDING_ENDPOINT"),
-            api_key=os.getenv("AZURE_EMBEDDING_API_KEY"),
-            api_version=os.getenv("AZURE_EMBEDDING_API_VERSION", "2024-02-01"),
+            azure_deployment=azure_env.embedding_deployment(),
+            azure_endpoint=azure_env.embedding_endpoint(),
+            api_key=azure_env.embedding_key(),
+            api_version=azure_env.embedding_api_version(),
         )
 
         self.llm = AzureChatOpenAI(
-            azure_deployment=os.getenv("DEPLOYMENT_NAME", "gpt-4o-mini"),
-            api_version="2024-02-01",
-            azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
-            api_key=os.getenv("AZURE_OPENAI_API_KEY"),
+            azure_deployment=azure_env.chat_deployment(),
+            api_version=azure_env.api_version(),
+            azure_endpoint=azure_env.openai_endpoint(),
+            api_key=azure_env.openai_key(),
         )
 
         if os.path.exists(FAISS_INDEX_PATH):

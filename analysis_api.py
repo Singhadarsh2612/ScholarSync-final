@@ -7,6 +7,8 @@ load_dotenv()
 
 from endpoints import MARKS_URL as MARKS_API, ATTENDANCE_URL as ATTENDANCE_API
 
+import azure_env
+
 
 def fetch_student_data():
 
@@ -50,9 +52,11 @@ def fetch_student_data():
 def generate_analysis(data):
 
     llm = AzureChatOpenAI(
-        azure_deployment=os.getenv("DEPLOYMENT_NAME", "gpt-4o-mini"),
+        azure_deployment=azure_env.chat_deployment(),
+        azure_endpoint=azure_env.openai_endpoint(),
+        api_key=azure_env.openai_key(),
         temperature=0,
-        api_version="2024-02-15-preview"
+        api_version=azure_env.api_version()
     )
 
     prompt = f"""

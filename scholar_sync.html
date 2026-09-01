@@ -2213,15 +2213,106 @@
       margin-bottom: 22px;
     }
 
-    .suggested-actions-container {
-      margin: 12px 26px 8px;
+    /* ── Suggested prompts, docked just above the composer ── */
+    .suggest-dock {
+      flex-shrink: 0;
+      position: relative;
+      z-index: 11;
+      padding: 0 22px;
+      background: rgba(2, 8, 16, .96);
+      backdrop-filter: blur(20px);
+    }
+
+    .sd-panel {
+      overflow: hidden;
+      max-height: 190px;
+      opacity: 1;
+      transform: translateY(0);
+      margin-bottom: 10px;
+      border: 1px solid var(--border2);
+      border-radius: 12px;
+      background: linear-gradient(180deg, rgba(12, 24, 44, .75) 0%, rgba(6, 14, 26, .92) 100%);
+      transition: max-height .3s cubic-bezier(.2, .8, .2, 1), opacity .2s ease,
+        transform .26s cubic-bezier(.2, .8, .2, 1), margin-bottom .26s ease;
+    }
+
+    .suggest-dock.collapsed .sd-panel {
+      max-height: 0;
+      opacity: 0;
+      transform: translateY(10px);
+      margin-bottom: 0;
+      border-width: 0;
+      pointer-events: none;
+    }
+
+    .sd-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 13px 7px;
+      font-family: var(--font-m);
+      font-size: 9.5px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--t3);
+    }
+
+    .sd-close {
+      background: transparent;
+      border: none;
+      color: var(--t3);
+      font-size: 12px;
+      line-height: 1;
+      padding: 4px 6px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all .18s;
+    }
+
+    .sd-close:hover {
+      color: #fff;
+      background: rgba(130, 180, 255, .12);
+    }
+
+    /* Collapsed state leaves only a small pill above the input bar */
+    .sd-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      margin-bottom: 10px;
+      padding: 6px 13px;
+      border-radius: 999px;
+      border: 1px solid var(--border2);
+      background: var(--navy3);
+      color: var(--t2);
+      font-family: var(--font-m);
+      font-size: 10px;
+      letter-spacing: .06em;
+      cursor: pointer;
+      transition: all .2s;
+    }
+
+    .sd-toggle:hover {
+      color: #fff;
+      border-color: rgba(61, 127, 255, .4);
+      box-shadow: 0 4px 14px rgba(16, 96, 240, .18);
+    }
+
+    .sd-spark {
+      color: var(--azure-m);
+    }
+
+    .suggest-dock:not(.collapsed) .sd-toggle {
+      display: none;
     }
 
     .prompt-chips {
       display: flex;
       flex-wrap: wrap;
-      gap: 8px;
-      width: 100%;
+      gap: 7px;
+      padding: 0 13px 13px;
+      max-height: 132px;
+      overflow-y: auto;
     }
 
     .p-chip {
@@ -3227,6 +3318,19 @@
         font-size: 10px;
       }
 
+      .suggest-dock {
+        padding: 0 14px;
+      }
+
+      .sd-panel {
+        max-height: 150px;
+      }
+
+      .prompt-chips {
+        max-height: 104px;
+        padding: 0 10px 10px;
+      }
+
       .app-body {
         flex-direction: column;
       }
@@ -3618,23 +3722,6 @@
             </div>
           </div>
 
-          <div class="suggested-actions-container">
-            <div class="prompt-chips">
-              <div class="p-chip" onclick="fillInput('send email to ')">send email to {any email}</div>
-              <div class="p-chip" onclick="fillInput('add calender event ')">add calender event</div>
-              <div class="p-chip" onclick="fillInput('list calender events')">list calender events</div>
-              <div class="p-chip" onclick="fillInput('what are my exam deadlines')">what are my exam deadlines</div>
-              <div class="p-chip" onclick="fillInput('what are my assignments')">what are my assignments</div>
-              <div class="p-chip" onclick="fillInput('what are my study materials')">what are my study materials</div>
-              <div class="p-chip" onclick="fillInput('start a greedy interview')">start a greedy interview</div>
-              <div class="p-chip" onclick="fillInput('what are marks of CN')">what are marks of CN</div>
-              <div class="p-chip" onclick="fillInput('am i short on attendace in any subject')">am i short on attendace
-                in any subject</div>
-              <div class="p-chip" onclick="fillInput('can you connect me with someone proficient in CN?')">connect me
-                with someone proficient in CN</div>
-            </div>
-          </div>
-
           <!-- Agent Workspace Chat -->
           <div class="chat-section">
 
@@ -3738,6 +3825,31 @@
 
 
 
+        <!-- Suggested prompts — docked above the composer, collapses once chatting starts -->
+        <div class="suggest-dock collapsed" id="suggest-dock">
+          <button class="sd-toggle" onclick="toggleSuggestions()" title="Show suggested prompts">
+            <span class="sd-spark">✦</span>Suggestions
+          </button>
+          <div class="sd-panel" id="sd-panel">
+            <div class="sd-head">
+              <span>Suggested prompts</span>
+              <button class="sd-close" onclick="hideSuggestions()" title="Hide suggestions">✕</button>
+            </div>
+            <div class="prompt-chips">
+              <div class="p-chip" onclick="fillInput('send email to ')">send email to {any email}</div>
+              <div class="p-chip" onclick="fillInput('add calender event ')">add calender event</div>
+              <div class="p-chip" onclick="fillInput('list calender events')">list calender events</div>
+              <div class="p-chip" onclick="fillInput('what are my exam deadlines')">what are my exam deadlines</div>
+              <div class="p-chip" onclick="fillInput('what are my assignments')">what are my assignments</div>
+              <div class="p-chip" onclick="fillInput('what are my study materials')">what are my study materials</div>
+              <div class="p-chip" onclick="fillInput('start a greedy interview')">start a greedy interview</div>
+              <div class="p-chip" onclick="fillInput('what are marks of CN')">what are marks of CN</div>
+              <div class="p-chip" onclick="fillInput('am i short on attendace in any subject')">am i short on attendace in any subject</div>
+              <div class="p-chip" onclick="fillInput('can you connect me with someone proficient in CN?')">connect me with someone proficient in CN</div>
+            </div>
+          </div>
+        </div>
+
         <!-- input-bar ID required by js/main.js -->
         <div class="input-bar" id="input-bar">
           <div class="input-wrap">
@@ -3825,6 +3937,7 @@
       _hideAllViews();
       document.getElementById("chat-box").style.display = "none";
       document.getElementById("input-bar").style.display = "none";
+      document.getElementById("suggest-dock").style.display = "none";
       document.getElementById("cards-section").style.display = "none";
       document.querySelector(".sidebar").style.display = "none";
       document.getElementById(viewId).style.display = "flex";
@@ -3841,6 +3954,7 @@
       _hideAllViews();
       document.getElementById("chat-box").style.display = "block";
       document.getElementById("input-bar").style.display = "flex";
+      document.getElementById("suggest-dock").style.display = "block";
       document.getElementById("cards-section").style.display = "block";
       document.querySelector(".sidebar").style.display = "flex";
       if (pushHistory === true) history.pushState({ view: 'app' }, '');
@@ -3886,7 +4000,38 @@
         input.value = text;
         input.focus();
       }
+      hideSuggestions();
     }
+
+    /* ── Suggested prompts dock ── */
+    function setSuggestions(open) {
+      const dock = document.getElementById("suggest-dock");
+      if (dock) dock.classList.toggle("collapsed", !open);
+    }
+
+    function hideSuggestions() { setSuggestions(false); }
+
+    function toggleSuggestions() {
+      const dock = document.getElementById("suggest-dock");
+      if (dock) setSuggestions(dock.classList.contains("collapsed"));
+    }
+
+    /* The chips only belong on an empty thread, so follow the chat box:
+       they show on the welcome screen / new chat and fold away once
+       a message lands — whether it was sent by button or by Enter. */
+    function syncSuggestions() {
+      const box = document.getElementById("chat-box");
+      if (!box) return;
+      const empty = !!document.getElementById("chat-welcome") && box.children.length <= 1;
+      setSuggestions(empty);
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      const box = document.getElementById("chat-box");
+      if (!box) return;
+      syncSuggestions();
+      new MutationObserver(syncSuggestions).observe(box, { childList: true });
+    });
 
     async function quickSync() {
       const loader = document.getElementById("sync-loader");

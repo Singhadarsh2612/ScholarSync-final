@@ -112,7 +112,10 @@ markdown==3.10.2
 
 # ── Interview service (merged from code-ide backend) ──
 azure-cognitiveservices-speech
-pymongo
+# pymongo[srv] pulls in dnspython, which is REQUIRED to resolve
+# mongodb+srv:// URIs (MongoDB Atlas and most hosted clusters).
+# Plain `pymongo` would install fine and then fail at connect time.
+pymongo[srv]
 python-multipart
 PyPDF2
 python-docx

@@ -36,6 +36,11 @@ docker-compose.yml
 # ── Secrets (injected as env vars at runtime) ──
 .env
 
+# Never bake the Google private key into an image. Compose bind-mounts
+# it into the mcp service read-only instead.
+service-account.json
+**/service-account.json
+
 # ── Local scratch / diagnostics ──
 check_scores.py
 query_db.py

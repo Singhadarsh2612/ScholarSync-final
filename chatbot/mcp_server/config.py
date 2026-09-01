@@ -19,6 +19,11 @@ load_dotenv()
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
 
+# The account the send_email tool sends as. Was hardcoded in send_email.py,
+# which meant the address and the app password it must match were configured
+# in two different places.
+GMAIL_SENDER = os.getenv("GMAIL_SENDER") or os.getenv("ADMIN_EMAIL") or ""
+
 _tavily_client = None
 
 

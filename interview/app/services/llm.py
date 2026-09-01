@@ -1,17 +1,40 @@
+"""
+interview/app/services/llm.py
+─────────────────────────────────────────────────────────────────────────────
+The interviewer's chat model.
+
+Credentials resolve through azure_env, so this shares whatever the hub is
+configured with instead of requiring its own variable names.
+"""
+
 from dotenv import load_dotenv
-import os
 from langchain_openai import AzureChatOpenAI
+
+import azure_env
 
 load_dotenv()
 
-llm=None
 
 def get_llm(agent_type: str):
-    azure_config = {
-        "azure_deployment": os.getenv("DEPLOYMENT_NAME", "gpt-4o-mini"),
-        "api_version": "2024-02-01",
-        "azure_endpoint": os.getenv("AZURE_OPENAI_ENDPOINT"),
-        "api_key": os.getenv("AZURE_OPENAI_API_KEY"),
-    }
-    llm =AzureChatOpenAI(**azure_config,temperature=0.7)
-    return llm
+    """Build a chat client for one of the interview agents.
+
+    Raises a clear error rather than returning a client that will fail later
+    with an opaque authentication message.
+    """
+    endpoint = azure_env.openai_endpoint()
+    api_key = azure_env.openai_key()
+
+    if not endpoint or not api_key:
+        raise RuntimeError(
+            "The interview service needs AZURE_OPENAI_ENDPOINT and "
+            "AZURE_OPENAI_API_KEY. Run `python azure_env.py` to see what "
+            f"currently resolves. (requested agent: {agent_type})"
+        )
+
+    return AzureChatOpenAI(
+        azure_deployment=azure_env.chat_deployment(),
+        api_version=azure_env.api_version(),
+        azure_endpoint=endpoint,
+        api_key=api_key,
+        temperature=0.7,
+    )

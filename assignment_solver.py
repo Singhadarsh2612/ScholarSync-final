@@ -11,6 +11,8 @@ GROQ_KEY = env.get("GROQ_API_KEY")
 
 import os
 from dotenv import load_dotenv
+
+import azure_env
 load_dotenv()
 
 CACHE_DIR = "cache"
@@ -79,16 +81,26 @@ def load_pdf_text(path):
 def _get_search_client():
     from azure.core.credentials import AzureKeyCredential
     from azure.search.documents import SearchClient
-    endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
-    key = os.getenv("AZURE_SEARCH_ADMIN_KEY")
-    index = os.getenv("AZURE_SEARCH_INDEX_NAME", "scholarsync-docs")
+    endpoint = azure_env.search_endpoint()
+    key = azure_env.search_key()
+    index = azure_env.search_index()
+    if not endpoint or not key:
+        raise RuntimeError(
+            "Azure AI Search is not configured: set AZURE_SEARCH_ENDPOINT and "
+            "AZURE_SEARCH_ADMIN_KEY (or AZURE_SEARCH_API_KEY) in .env."
+        )
     return SearchClient(endpoint=endpoint, index_name=index, credential=AzureKeyCredential(key))
 
 def _get_index_client():
     from azure.core.credentials import AzureKeyCredential
     from azure.search.documents.indexes import SearchIndexClient
-    endpoint = os.getenv("AZURE_SEARCH_ENDPOINT")
-    key = os.getenv("AZURE_SEARCH_ADMIN_KEY")
+    endpoint = azure_env.search_endpoint()
+    key = azure_env.search_key()
+    if not endpoint or not key:
+        raise RuntimeError(
+            "Azure AI Search is not configured: set AZURE_SEARCH_ENDPOINT and "
+            "AZURE_SEARCH_ADMIN_KEY (or AZURE_SEARCH_API_KEY) in .env."
+        )
     return SearchIndexClient(endpoint=endpoint, credential=AzureKeyCredential(key))
 
 def _ensure_index():
@@ -99,7 +111,7 @@ def _ensure_index():
         VectorSearchProfile
     )
     client = _get_index_client()
-    index_name = os.getenv("AZURE_SEARCH_INDEX_NAME", "scholarsync-docs")
+    index_name = azure_env.search_index()
     existing = [i.name for i in client.list_indexes()]
     if index_name in existing:
         return
@@ -127,13 +139,13 @@ def _embed(text: str) -> list:
     """Embed a single text string using Azure OpenAI text-embedding-3-small."""
     from openai import AzureOpenAI
     client = AzureOpenAI(
-        api_key=os.getenv("AZURE_EMBEDDING_API_KEY"),
-        api_version=os.getenv("AZURE_EMBEDDING_API_VERSION", "2024-02-01"),
-        azure_endpoint=os.getenv("AZURE_EMBEDDING_ENDPOINT")
+        api_key=azure_env.embedding_key(),
+        api_version=azure_env.embedding_api_version(),
+        azure_endpoint=azure_env.embedding_endpoint()
     )
     result = client.embeddings.create(
         input=text,
-        model=os.getenv("AZURE_EMBEDDING_DEPLOYMENT", "text-embedding-3-small")
+        model=azure_env.embedding_deployment()
     )
     return result.data[0].embedding
 
@@ -219,9 +231,11 @@ def solve_assignment(question, history, assignment_url, material_urls):
         return "I could not read the document. The URL may be inaccessible or not a valid PDF."
 
     llm = AzureChatOpenAI(
-        azure_deployment=os.getenv("DEPLOYMENT_NAME", "gpt-4o-mini"),
+        azure_deployment=azure_env.chat_deployment(),
+        azure_endpoint=azure_env.openai_endpoint(),
+        api_key=azure_env.openai_key(),
         temperature=0,
-        api_version="2024-02-15-preview"
+        api_version=azure_env.api_version()
     )
 
     query_reformulation_prompt = f"""
@@ -306,9 +320,11 @@ def solve_entire_assignment(assignment_url, material_urls):
     assignment_text = assignment_text[:8000]
 
     llm = AzureChatOpenAI(
-        azure_deployment=os.getenv("DEPLOYMENT_NAME", "gpt-4o-mini"),
+        azure_deployment=azure_env.chat_deployment(),
+        azure_endpoint=azure_env.openai_endpoint(),
+        api_key=azure_env.openai_key(),
         temperature=0,
-        api_version="2024-02-15-preview"
+        api_version=azure_env.api_version()
     )
 
     prompt = f"""

@@ -1,9 +1,8 @@
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-from ..config import GMAIL_APP_PASSWORD
+from ..config import GMAIL_APP_PASSWORD, GMAIL_SENDER
 
-GMAIL_SENDER = "syncscholar079@gmail.com"
 
 def send_email(data):
 
@@ -12,6 +11,12 @@ def send_email(data):
     body = data["body"]
 
     print("[MCP] send_email ->", to)
+
+    # Without these, smtp.login() would be handed None and raise a TypeError
+    # rather than returning the tool-shaped result callers expect.
+    if not GMAIL_SENDER or not GMAIL_APP_PASSWORD:
+        return {"result": "Email is not configured: set GMAIL_SENDER (or "
+                          "ADMIN_EMAIL) and GMAIL_APP_PASSWORD in .env."}
 
     msg = MIMEMultipart()
     msg["From"] = GMAIL_SENDER
