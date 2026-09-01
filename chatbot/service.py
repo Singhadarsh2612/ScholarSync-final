@@ -13,10 +13,26 @@ Changes from previous version:
 
 import asyncio
 import json
+import os
+from contextlib import nullcontext
 
 from langchain_core.messages import HumanMessage
 from langsmith import traceable
 from langchain_core.tracers.context import tracing_v2_enabled
+
+
+def _trace_ctx():
+    """Enable LangSmith tracing only when a key is configured.
+
+    config.py sets LANGCHAIN_TRACING_V2=false without a key, but
+    tracing_v2_enabled() force-enables tracing regardless, so every chat
+    request used to fire an upload that 401'd and flooded the logs.
+    """
+    if not os.getenv("LANGCHAIN_API_KEY"):
+        return nullcontext()
+    return tracing_v2_enabled(
+        project_name=os.getenv("LANGCHAIN_PROJECT", "ScholarSync")
+    )
 
 from . import memory
 from .config import threads
@@ -31,7 +47,7 @@ async def chat_stream(user_message: str, thread_id: str):
     state  = {"messages": [HumanMessage(content=user_message)]}
     config = {"configurable": {"thread_id": thread_id}}
 
-    with tracing_v2_enabled(project_name="ScholarSync"):
+    with _trace_ctx():
 
         try:
             final_state = await asyncio.wait_for(

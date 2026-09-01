@@ -3,16 +3,10 @@ import re
 import requests
 from io import BytesIO
 from pypdf import PdfReader
-from dotenv import dotenv_values
-
-
-env = dotenv_values(".env")
-GROQ_KEY = env.get("GROQ_API_KEY")
-
-import os
 from dotenv import load_dotenv
 
 import azure_env
+
 load_dotenv()
 
 CACHE_DIR = "cache"

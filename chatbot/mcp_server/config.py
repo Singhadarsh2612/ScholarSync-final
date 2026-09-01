@@ -1,12 +1,7 @@
-"""
-chatbot/mcp_server/config.py
-─────────────────────────────────────────────────────────────────────────────
-Configuration for the MCP tool server.
+"""MCP tool server configuration.
 
-The Tavily client is created on first use, not at import. Constructing it
-eagerly raised MissingAPIKeyError when TAVILY_API_KEY was unset, which took
-down the whole MCP server at startup — so one missing optional key disabled
-calendar, email and every other tool as well.
+The Tavily client is built on first use: constructing it eagerly raised
+MissingAPIKeyError without a key, taking down calendar and email too.
 """
 
 import os
@@ -19,20 +14,15 @@ load_dotenv()
 TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
 GMAIL_APP_PASSWORD = os.getenv("GMAIL_APP_PASSWORD")
 
-# The account the send_email tool sends as. Was hardcoded in send_email.py,
-# which meant the address and the app password it must match were configured
-# in two different places.
+# Account the send_email tool sends as. Was hardcoded in send_email.py.
 GMAIL_SENDER = os.getenv("GMAIL_SENDER") or os.getenv("ADMIN_EMAIL") or ""
 
 _tavily_client = None
 
 
 def get_tavily_client():
-    """Return a Tavily client, or None when no API key is configured.
-
-    Callers must handle None so web search degrades on its own instead of
-    breaking unrelated tools.
-    """
+    """A Tavily client, or None when no key is configured. Callers must handle
+    None so web search degrades without breaking unrelated tools."""
     global _tavily_client
 
     if _tavily_client is None:

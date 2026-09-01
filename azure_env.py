@@ -1,28 +1,11 @@
-"""
-azure_env.py
-─────────────────────────────────────────────────────────────────────────────
-Single source of truth for Azure credentials, mirroring what endpoints.py does
-for service URLs.
+"""Azure credential resolution.
 
-Why this exists
----------------
-The same credential was being read under different names in different files,
-and a real .env in the wild does not always use the name the code happens to
-expect. Rather than force one spelling, every value here resolves through an
-ordered list of aliases: the first name that holds a non-empty value wins.
+Every value resolves through an ordered list of aliases; the first non-empty
+one wins. The role-specific chains end at AZURE_OPENAI_*, so one Azure OpenAI
+resource can serve all roles.
 
-Two consequences worth knowing:
-
-1.  **One Azure OpenAI resource is enough.** The role-specific chains
-    (mini_2, gpt-4o, embeddings) fall back to AZURE_OPENAI_ENDPOINT /
-    AZURE_OPENAI_API_KEY. Set only those two and everything works; override a
-    role's own variables when you genuinely want it on a separate resource.
-
-2.  **Renaming a variable does not break the app.** Add the old name to the
-    relevant chain instead of editing call sites.
-
-No side effects beyond load_dotenv(), so importing this never needs
-credentials to be present.
+    python azure_env.py           # what resolves
+    python azure_env.py --live    # also check each deployment exists in Azure
 """
 
 import os
@@ -31,28 +14,18 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Fallback used when no *_API_VERSION is set. Azure requires an explicit
-# api-version on every request; this is the value the project was built on.
 DEFAULT_API_VERSION = "2024-02-15-preview"
 DEFAULT_EMBEDDING_API_VERSION = "2024-02-01"
 
 
 def env_any(*names, default=None):
-    """Return the first non-empty value among `names`, else `default`.
-
-    Blank ("KEY=") counts as unset, which matters because .env files are
-    routinely left with empty placeholders rather than having lines deleted.
-    """
+    """First non-empty value among `names`. Blank counts as unset."""
     for name in names:
         value = os.getenv(name)
         if value and value.strip():
             return value.strip()
     return default
 
-
-# ── Alias chains ────────────────────────────────────────────────────────────
-# Order is precedence. Keep the role-specific name first and the shared
-# AZURE_OPENAI_* fallback last.
 
 _ENDPOINT = ("AZURE_OPENAI_ENDPOINT",)
 _KEY = ("AZURE_OPENAI_API_KEY",)
@@ -64,7 +37,6 @@ _MINI_2_DEPLOYMENT = ("MINI_2_DEPLOYMENT", "GPT41MINI_DEPLOYMENT",
 
 _GPT4O_ENDPOINT = ("GPT4O_ENDPOINT",) + _ENDPOINT
 _GPT4O_KEY = ("GPT4O_API_KEY",) + _KEY
-_GPT4O_DEPLOYMENT = ("GPT4O_DEPLOYMENT",)
 
 _CHAT_DEPLOYMENT = ("DEPLOYMENT_NAME", "GPT4O_MINI_DEPLOYMENT")
 
@@ -75,8 +47,6 @@ _EMB_DEPLOYMENT = ("AZURE_EMBEDDING_DEPLOYMENT", "EMBEDDING_DEPLOYMENT")
 _SEARCH_KEY = ("AZURE_SEARCH_ADMIN_KEY", "AZURE_SEARCH_API_KEY",
                "AZURE_SEARCH_KEY")
 
-
-# ── Chat models ─────────────────────────────────────────────────────────────
 
 def api_version():
     return env_any("AZURE_OPENAI_API_VERSION", default=DEFAULT_API_VERSION)
@@ -91,7 +61,6 @@ def openai_key():
 
 
 def chat_deployment():
-    """The gpt-4o-mini-class deployment used by most callers."""
     return env_any(*_CHAT_DEPLOYMENT, default="gpt-4o-mini")
 
 
@@ -116,10 +85,8 @@ def gpt4o_key():
 
 
 def gpt4o_deployment():
-    return env_any(*_GPT4O_DEPLOYMENT, default="gpt-4o")
+    return env_any("GPT4O_DEPLOYMENT", default="gpt-4o")
 
-
-# ── Embeddings ──────────────────────────────────────────────────────────────
 
 def embedding_endpoint():
     return env_any(*_EMB_ENDPOINT)
@@ -138,8 +105,6 @@ def embedding_api_version():
                    default=DEFAULT_EMBEDDING_API_VERSION)
 
 
-# ── Azure AI Search ─────────────────────────────────────────────────────────
-
 def search_endpoint():
     return env_any("AZURE_SEARCH_ENDPOINT")
 
@@ -152,8 +117,6 @@ def search_index():
     return env_any("AZURE_SEARCH_INDEX_NAME", default="scholarsync-docs")
 
 
-# ── Speech ──────────────────────────────────────────────────────────────────
-
 def speech_key():
     return env_any("AZURE_SPEECH_KEY")
 
@@ -162,53 +125,30 @@ def speech_region():
     return env_any("AZURE_SPEECH_REGION", default="eastus")
 
 
-# ── Diagnostics ─────────────────────────────────────────────────────────────
-
 def credential_report():
-    """Which capabilities have an endpoint and key resolved.
+    """{capability: (has_endpoint_and_key, detail)}. Never includes a secret.
 
-    Returns {capability: (ok, detail)} — safe to log, since it never includes
-    a secret's value.
-
-    This checks only that credentials RESOLVE. It cannot tell you whether a
-    deployment name exists in your Azure resource; a wrong name passes here and
-    then fails at request time with `DeploymentNotFound`. Use
-    `python azure_env.py --live` for that.
+    Only checks that credentials resolve — a deployment name that does not
+    exist in Azure passes here and fails at request time. Use --live for that.
     """
     return {
-        "chat (llm_mini_1)": (
-            bool(openai_endpoint() and openai_key()),
-            f"deployment={chat_deployment()}",
-        ),
-        "chat (llm_mini_2)": (
-            bool(mini_2_endpoint() and mini_2_key()),
-            f"deployment={mini_2_deployment()}",
-        ),
-        "chat (llm_4o)": (
-            bool(gpt4o_endpoint() and gpt4o_key()),
-            f"deployment={gpt4o_deployment()}",
-        ),
-        "embeddings": (
-            bool(embedding_endpoint() and embedding_key()),
-            f"deployment={embedding_deployment()}",
-        ),
-        "azure ai search": (
-            bool(search_endpoint() and search_key()),
-            f"index={search_index()}",
-        ),
-        "speech (TTS/STT)": (
-            bool(speech_key()),
-            f"region={speech_region()}",
-        ),
+        "chat (llm_mini_1)": (bool(openai_endpoint() and openai_key()),
+                              f"deployment={chat_deployment()}"),
+        "chat (llm_mini_2)": (bool(mini_2_endpoint() and mini_2_key()),
+                              f"deployment={mini_2_deployment()}"),
+        "chat (llm_4o)": (bool(gpt4o_endpoint() and gpt4o_key()),
+                          f"deployment={gpt4o_deployment()}"),
+        "embeddings": (bool(embedding_endpoint() and embedding_key()),
+                       f"deployment={embedding_deployment()}"),
+        "azure ai search": (bool(search_endpoint() and search_key()),
+                            f"index={search_index()}"),
+        "speech (TTS/STT)": (bool(speech_key()), f"region={speech_region()}"),
     }
 
 
 def list_deployments():
-    """Names actually deployed in the Azure OpenAI resource.
-
-    Returns a list of (name, model) or raises. Uses the data-plane listing
-    endpoint, so the same api-key the app uses is enough — no ARM credentials.
-    """
+    """[(name, model)] actually deployed. Uses the data-plane listing endpoint,
+    so the app's api-key is enough — no ARM credentials."""
     import json
     import urllib.request
 
@@ -225,9 +165,7 @@ def list_deployments():
 
 
 def _live_report():
-    """Check each configured deployment against what Azure really has."""
-    print("\nDeployments in the Azure OpenAI resource")
-    print("-" * 52)
+    print("\nDeployments in the Azure OpenAI resource\n" + "-" * 52)
     try:
         deployed = list_deployments()
     except Exception as exc:
@@ -238,15 +176,11 @@ def _live_report():
         print(f"  {name:28} model={model}")
 
     names = {n for n, _ in deployed}
-    print("\nConfigured names vs. what exists")
-    print("-" * 52)
-    configured = [
-        ("llm_mini_1 / interview", chat_deployment()),
-        ("llm_mini_2", mini_2_deployment()),
-        ("llm_4o", gpt4o_deployment()),
-        ("embeddings", embedding_deployment()),
-    ]
-    for role, name in configured:
+    print("\nConfigured names vs. what exists\n" + "-" * 52)
+    for role, name in [("llm_mini_1 / interview", chat_deployment()),
+                       ("llm_mini_2", mini_2_deployment()),
+                       ("llm_4o", gpt4o_deployment()),
+                       ("embeddings", embedding_deployment())]:
         ok = name in names
         note = "" if ok else "   <- not deployed; will 404 at request time"
         print(f"  {'OK     ' if ok else 'MISSING'} {role:24} {name}{note}")
@@ -255,8 +189,7 @@ def _live_report():
 if __name__ == "__main__":
     import sys
 
-    # ASCII only: a redirected Windows console is cp1252 and cannot encode
-    # box-drawing characters.
+    # ASCII only: a redirected Windows console is cp1252.
     print("Azure credential resolution\n" + "-" * 52)
     for name, (ok, detail) in credential_report().items():
         print(f"  {'OK     ' if ok else 'MISSING'} {name:20} {detail}")
@@ -264,5 +197,4 @@ if __name__ == "__main__":
     if "--live" in sys.argv:
         _live_report()
     else:
-        print("\n(credentials only — run with --live to check that each "
-              "deployment name exists in Azure)")
+        print("\n(credentials only — run with --live to check deployment names)")

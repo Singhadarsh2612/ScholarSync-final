@@ -279,11 +279,6 @@ from assignment_solver import solve_entire_assignment, generate_solution_pdf
 class FullAssignmentRequest(BaseModel):
     assignment_doc: str
     material_links: list = []
-
-
-class FullAssignmentRequest(BaseModel):
-    assignment_doc: str
-    material_links: list = []
     assignment_id: str
 
 
