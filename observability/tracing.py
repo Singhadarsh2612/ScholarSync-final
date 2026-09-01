@@ -74,10 +74,13 @@ def _finish(run, outputs=None, error=None, metadata=None):
 def observe_node(name):
     """Wrap a LangGraph node as a `chain` span.
 
-    Nodes take the whole state and return a partial update, so inputs are a
-    trimmed snapshot and outputs are the update's keys plus their values.
+    Returns the function untouched unless OBS_WRAP_NODES is set: LangGraph
+    already emits a span per node, so wrapping duplicates it.
     """
     def decorator(fn):
+        if not config.WRAP_NODES:
+            return fn
+
         @functools.wraps(fn)
         async def wrapper(state, *args, **kwargs):
             inputs = {"state": sanitize.state_snapshot(state)}
@@ -148,8 +151,14 @@ def _token_usage(response):
 def observe_llm(fn):
     """Wrap the single funnel every LLM call passes through.
 
+    Returns the function untouched unless OBS_WRAP_LLM is set: LangChain
+    already emits an `llm` span per call, with its own token accounting.
+
     Expects (llm, system, human) -> str, matching swarm_agents._llm_call.
     """
+    if not config.WRAP_LLM:
+        return fn
+
     @functools.wraps(fn)
     async def wrapper(llm, system, human, *args, **kwargs):
         model = getattr(llm, "_deployment_fn", None)

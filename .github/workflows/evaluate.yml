@@ -1,0 +1,108 @@
+name: Evaluate
+
+# Three triggers:
+#   push/PR    — gate changes to the agent, tools or RAG pipeline
+#   schedule   — catch drift from model or upstream-portal changes
+#   manual     — run one suite on demand from the Actions tab
+on:
+  push:
+    branches: [main]
+    paths:
+      - "chatbot/**"
+      - "interview/**"
+      - "assignment_solver.py"
+      - "evaluation/**"
+      - "observability/**"
+      - "azure_env.py"
+      - "endpoints.py"
+  pull_request:
+    paths:
+      - "chatbot/**"
+      - "interview/**"
+      - "assignment_solver.py"
+      - "evaluation/**"
+  schedule:
+    # 04:00 UTC Mondays. Scores move when the deployment or the portal data
+    # changes, not only when this repo does.
+    - cron: "0 4 * * 1"
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: "Which suite to run"
+        type: choice
+        default: both
+        options: [both, agent, rag]
+
+jobs:
+  evaluate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: scholarsync
+          POSTGRES_PASSWORD: scholarsync
+          POSTGRES_DB: scholarsync
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U scholarsync -d scholarsync"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+
+    env:
+      # Every value is a repository secret: Settings -> Secrets and variables
+      # -> Actions. The suites make real Azure and Atlas calls.
+      AZURE_OPENAI_ENDPOINT: ${{ secrets.AZURE_OPENAI_ENDPOINT }}
+      AZURE_OPENAI_API_KEY: ${{ secrets.AZURE_OPENAI_API_KEY }}
+      AZURE_OPENAI_API_VERSION: ${{ secrets.AZURE_OPENAI_API_VERSION }}
+      DEPLOYMENT_NAME: ${{ secrets.DEPLOYMENT_NAME }}
+      GPT4O_DEPLOYMENT: ${{ secrets.GPT4O_DEPLOYMENT }}
+      EMBEDDING_DEPLOYMENT: ${{ secrets.EMBEDDING_DEPLOYMENT }}
+      AZURE_SEARCH_ENDPOINT: ${{ secrets.AZURE_SEARCH_ENDPOINT }}
+      AZURE_SEARCH_API_KEY: ${{ secrets.AZURE_SEARCH_API_KEY }}
+      AZURE_SEARCH_INDEX_NAME: ${{ secrets.AZURE_SEARCH_INDEX_NAME }}
+      MONGO_URI: ${{ secrets.MONGO_URI }}
+      DB_NAME: ${{ secrets.DB_NAME }}
+      DATABASE_URL: postgresql://scholarsync:scholarsync@localhost:5432/scholarsync
+      # Tracing the eval run itself makes a regression inspectable afterwards.
+      LANGSMITH_API_KEY: ${{ secrets.LANGSMITH_API_KEY }}
+      LANGSMITH_PROJECT: ScholarSync-CI
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Report resolved credentials
+        # Prints names and which capabilities resolve, never secret values.
+        run: python azure_env.py --live
+
+      - name: Observability status
+        run: python -m observability.status
+
+      - name: Evaluate
+        run: |
+          SUITE="${{ github.event.inputs.suite || 'both' }}"
+          case "$SUITE" in
+            agent) FLAGS="--agent" ;;
+            rag)   FLAGS="--rag" ;;
+            *)     FLAGS="" ;;
+          esac
+          python -m evaluation.runner $FLAGS --json eval-report.json
+
+      - name: Upload report
+        # Runs even on failure: the report is what explains the failure.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: eval-report.json

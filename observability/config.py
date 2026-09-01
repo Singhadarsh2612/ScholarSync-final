@@ -16,6 +16,13 @@ PROJECT = (os.getenv("LANGSMITH_PROJECT")
            or os.getenv("LANGCHAIN_PROJECT")
            or "ScholarSync")
 
+# LangGraph and LangChain auto-instrument graph nodes and LLM calls as soon as
+# LANGCHAIN_TRACING_V2 is on, so wrapping them again nests a duplicate span
+# around every one. Off by default; turn on to get the trimmed state snapshots
+# and normalised token metadata instead of the SDK's native spans.
+WRAP_NODES = os.getenv("OBS_WRAP_NODES", "").lower() in ("1", "true", "yes")
+WRAP_LLM = os.getenv("OBS_WRAP_LLM", "").lower() in ("1", "true", "yes")
+
 # Truncation guard: prompts and tool payloads can be large, and a trace is a
 # diagnostic, not an archive.
 MAX_FIELD_CHARS = int(os.getenv("OBS_MAX_FIELD_CHARS", "4000"))
@@ -40,6 +47,8 @@ def summary() -> dict:
     return {
         "enabled": enabled(),
         "project": PROJECT if enabled() else None,
+        "wrap_nodes": WRAP_NODES,
+        "wrap_llm": WRAP_LLM,
         "capture_content": CAPTURE_CONTENT,
         "max_field_chars": MAX_FIELD_CHARS,
         "key_source": (

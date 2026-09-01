@@ -22,14 +22,34 @@ async def correctness(question, answer, expected):
     )
 
 
-async def no_fabrication(question, answer):
+async def no_fabrication(question, answer, evidence=None):
+    """Judge invention against what the system actually retrieved.
+
+    Without the tool output this metric is meaningless: the agent HAS a live
+    data feed, so every real score and deadline it reports looks invented when
+    the answer is judged alone. That produced 0.00 here on answers scoring 1.00
+    for correctness. When no tool ran, the metric abstains rather than guessing.
+    """
+    if not evidence:
+        return await score(
+            "no_fabrication",
+            "Judge whether the answer invents specifics it could not know. No "
+            "tool output was captured for this answer, so if it states concrete "
+            "records you cannot verify them either way — return n/a rather than "
+            "assuming invention. Explicitly saying data is unavailable is 1.0.",
+            {"Question": question, "Answer": answer},
+            allow_na=True,
+        )
+
     return await score(
         "no_fabrication",
-        "Judge whether the answer invents specifics it could not know — "
-        "scores, dates, titles or names presented as the student's real data. "
-        "Explicitly saying data is unavailable scores 1.0. Inventing "
-        "plausible-looking records scores 0.0.",
-        {"Question": question, "Answer": answer},
+        "The system retrieved the data below before answering. Judge ONLY "
+        "whether the answer states specifics that are absent from it. Values "
+        "present in the retrieved data are NOT fabrication, however specific. "
+        "Reformatting, summarising, and converting date formats are fine. "
+        "Inventing a record that is not in the data scores 0.0; an answer fully "
+        "grounded in it scores 1.0.",
+        {"Question": question, "Retrieved data": evidence, "Answer": answer},
     )
 
 
@@ -58,9 +78,10 @@ async def tool_choice(question, tools_used, expected_tools):
 
 
 async def evaluate(question, answer, *, expected=None, expected_tools=None,
-                   tools_used=None):
+                   tools_used=None, evidence=None):
     """Run the applicable agent metrics concurrently."""
-    jobs = [no_fabrication(question, answer), helpfulness(question, answer)]
+    jobs = [no_fabrication(question, answer, evidence),
+            helpfulness(question, answer)]
     if expected:
         jobs.append(correctness(question, answer, expected))
     if expected_tools is not None:

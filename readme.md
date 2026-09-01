@@ -363,6 +363,14 @@ ScholarSync Chat            thread_id, status, latency, tools_called
 └── PresentationAgent       chain
 ```
 
+LangGraph and LangChain emit their own `chain` and `llm` spans as soon as a key
+is set, so `observability` deliberately does **not** wrap nodes and LLM calls by
+default — doing so nests a duplicate span around every one. The root request
+span and the tool spans are always emitted, because LangChain cannot see the
+plain Python functions behind `_call_tool`. Set `OBS_WRAP_NODES=true` /
+`OBS_WRAP_LLM=true` to add the trimmed state snapshots and normalised token
+metadata as extra layers.
+
 `result_empty` exists because a tool returning `[]` is how a real bug presented:
 the agent stated there were no assignments while the portal listed six. An empty
 tool result is now visible in the trace rather than inferred from the answer.
@@ -374,13 +382,48 @@ looks like a secret is replaced before upload.
 
 ### Evaluation
 
+Against the running stack (recommended — same code the containers serve):
+
 ```bash
-python -m evaluation.runner            # both suites
-python -m evaluation.runner --agent    # agent responses
-python -m evaluation.runner --rag      # RAG triad
-python -m evaluation.runner --case rag-absent-topic
-python -m evaluation.runner --json report.json
+npm run eval            # both suites
+npm run eval:agent      # agent responses
+npm run eval:rag        # RAG triad
+npm run eval:report     # writes eval-report.json
+npm run obs:status      # is tracing configured and reachable?
 ```
+
+Or directly, if you are inside the container or running the hub locally:
+
+```bash
+python -m evaluation.runner                          # both suites
+python -m evaluation.runner --agent                   # agent responses
+python -m evaluation.runner --rag                     # RAG triad
+python -m evaluation.runner --case rag-absent-topic    # one case, repeatable
+python -m evaluation.runner --json report.json         # machine-readable
+```
+
+`--case` is the one to reach for while fixing something: it reruns a single case
+in seconds instead of the whole suite.
+
+### Automated triggers
+
+`.github/workflows/evaluate.yml` runs the suites on four triggers:
+
+| Trigger | When | Why |
+|---|---|---|
+| `push` to `main` | changes under `chatbot/`, `interview/`, `assignment_solver.py`, `evaluation/`, `observability/` | catch a regression at the commit that caused it |
+| `pull_request` | same paths | review sees the scores before merge |
+| `schedule` | 04:00 UTC Mondays | scores drift when the model or the upstream portal changes, not only when this repo does |
+| `workflow_dispatch` | manual, with a suite picker | rerun one suite on demand |
+
+The workflow needs the Azure, Atlas and LangSmith values as **repository secrets**
+(Settings → Secrets and variables → Actions), because both suites make real API
+calls. It traces into a separate `ScholarSync-CI` project so CI runs do not mix
+with local ones, prints `azure_env.py --live` first so a credential problem is
+obvious rather than looking like a quality regression, and uploads
+`eval-report.json` as an artifact even on failure — the report is what explains
+the failure. The runner exits non-zero below the threshold, so the job fails on
+its own.
 
 **RAG triad** — each metric isolates a different component, so a failure points
 at one place:

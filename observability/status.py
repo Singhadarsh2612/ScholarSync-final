@@ -9,6 +9,10 @@ def main():
     print(f"  tracing         : {'ON' if info['enabled'] else 'OFF'}")
     print(f"  key source      : {info['key_source'] or '(no key set)'}")
     print(f"  project         : {info['project'] or '-'}")
+    print(f"  wrap nodes      : {info['wrap_nodes']}"
+          "   (LangGraph traces nodes natively)")
+    print(f"  wrap llm calls  : {info['wrap_llm']}"
+          "   (LangChain traces LLM calls natively)")
     print(f"  capture content : {info['capture_content']}")
     print(f"  max field chars : {info['max_field_chars']}")
 

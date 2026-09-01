@@ -69,3 +69,6 @@ interview/resume_cache/
 # NOTE: the `cache/` rule above is intentionally broad but has a sharp edge —
 # it also matches venv/Lib/site-packages/langgraph/cache/, which is why the
 # committed venv could not import langgraph. Untrack venv/ before narrowing it.
+
+# Evaluation output
+eval-report.json

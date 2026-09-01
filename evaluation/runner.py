@@ -35,14 +35,23 @@ async def _run_agent_case(case):
         return {"id": case["id"], "error": f"{type(exc).__name__}: {exc}"[:200]}
 
     answer = final.get("final_response", "") or ""
-    tools_used = [r.get("tool") for r in final.get("execution_results", [])
-                  if r.get("tool") and not r.get("skipped")]
+    results = [r for r in final.get("execution_results", [])
+               if r.get("tool") and not r.get("skipped")]
+    tools_used = [r["tool"] for r in results]
+
+    # What the agent actually had in hand. no_fabrication is judged against
+    # this, not against the answer alone.
+    evidence = "\n\n".join(
+        f"[{r['tool']}]\n{(r.get('result_str') or str(r.get('result', '')))[:4000]}"
+        for r in results
+    ) or None
 
     metrics = await agent_metrics.evaluate(
         case["question"], answer,
         expected=case.get("expected"),
         expected_tools=case.get("expected_tools"),
         tools_used=tools_used,
+        evidence=evidence,
     )
     return {"id": case["id"], "regression": case.get("regression", False),
             "question": case["question"], "answer": answer,
