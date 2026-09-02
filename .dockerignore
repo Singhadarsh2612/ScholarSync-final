@@ -52,3 +52,21 @@ generated_pdfs/
 cache/
 faiss_index/
 resume_cache/
+
+# ── CI/eval-only, not imported by the running app (server.py/chatbot/interview
+# import `observability`, never `evaluation` or `tests` — confirmed, keep
+# observability/ OUT of this file) ──
+tests/
+evaluation/
+reports/
+.github/
+
+# ── Test/lint cache ──
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# ── OS cruft ──
+.DS_Store
+Thumbs.db
