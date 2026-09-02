@@ -44,14 +44,14 @@ async def init_chatbot():
             await saver.setup()
             chatbot = builder.compile(checkpointer=saver)
             using_memory_saver = False
-            print("✅ AsyncPostgresSaver initialized")
+            print("[checkpointer] AsyncPostgresSaver initialized")
             return saver_cm
         except Exception as e:
-            print(f"⚠️  Postgres checkpointer unavailable: {e}")
+            print(f"[checkpointer] Postgres unavailable: {e}")
     else:
-        print("⚠️  DATABASE_URL is not set.")
+        print("[checkpointer] DATABASE_URL is not set.")
 
-    print("⚠️  Falling back to in-memory checkpointer — "
+    print("[checkpointer] Falling back to in-memory checkpointer: "
           "conversation threads will NOT survive a restart.")
 
     saver_cm = _memory_saver_cm()

@@ -75,6 +75,21 @@ dependency set, and one API surface (`/docs` documents both), and the agent now
 calls the routing logic as a function. The MCP tool server stays separate,
 because it genuinely is optional and restarts independently.
 
+**Why do the three explorers run concurrently?**
+They are independent by construction: each reads the same `planner_steps` and
+emits its own candidate plan, and none reads another's output. Run in sequence
+the stage cost the sum of three LLM calls; fanned out it costs one, measured at
+**-24.4% end-to-end latency on the complex path** with token spend and LLM
+round-trip counts unchanged (see *Performance benchmark*).
+
+That requires a reducer on `explorer_outputs`, since three nodes now write one
+key in the same superstep. It is hand-written rather than `operator.add`
+because `ComplexityAnalyzer` clears the key with `[]` at the start of every
+turn, and under a concatenating reducer that reset silently becomes a no-op --
+leaking each turn's plans into the next for the life of the thread. An empty
+write therefore resets; `tests/test_explorer_parallelism.py` pins both halves
+of that behaviour.
+
 **Why two databases?**
 They serve different shapes. Postgres backs LangGraph's checkpointer — the
 official `langgraph-checkpoint-postgres` saver, which wants relational
@@ -211,7 +226,7 @@ scholarsync/
 │
 ├── azure_env.py             # Azure credential resolution (alias chains)
 ├── Dockerfile               # Shared image for the hub and MCP server
-├── docker-compose.yml       # Full stack (mongo is behind a `local-db` profile)
+├── docker-compose.yml       # Full stack (Postgres and Mongo are managed/hosted, no local DB containers)
 ├── package.json             # Convenience scripts for the three JS apps
 └── .env.example             # Every credential, annotated
 ```
@@ -405,13 +420,103 @@ python -m evaluation.runner --json report.json         # machine-readable
 `--case` is the one to reach for while fixing something: it reruns a single case
 in seconds instead of the whole suite.
 
+### Measured scores
+
+Full suite, `gpt-4.1-mini` as judge, threshold `0.7`. "Before" and "after"
+bracket the evidence-budget fix described below.
+
+| Suite | Pass before | Pass after | Mean before | Mean after |
+|---|---|---|---|---|
+| agent (8 cases) | 2/8 | **4/8** | 0.555 | **0.661** |
+| RAG (4 cases) | 1/4 | **2/4** | 0.508 | **0.613** |
+
+Read those honestly, because the two suites moved for different reasons:
+
+- **The agent gain is a real fix.** `no_fabrication` was judging answers against
+  tool output clipped at 4000 chars, which cut `get_exams_raw` (~7.3 KB)
+  mid-record. The judge saw a subject with no date attached and called a correct
+  answer invented -- `exams-schedule` scored `no_fabrication` 0.00 and
+  `correctness` 1.00 *on the same answer*. Raising the budget and marking any
+  clip inline moved that case 0.53 -> 0.87 and `multi-tool-priority`'s
+  fabrication score 0.00 -> 1.00. `tests/test_evidence_budget.py` pins it.
+- **The RAG gain is mostly noise.** The evidence budget is agent-only. Nearly
+  all of that delta is `rag-absent-topic` (0.50 -> 1.00), where the judge
+  flipped `faithfulness` between 0.00 and 1.00 on an unchanged answer. Judge
+  non-determinism on refusal cases is a known weakness of this suite.
+
+Four cases still fail, and they are failing for real reasons rather than being
+tuned away:
+
+| Case | Why |
+|---|---|
+| `multi-tool-priority` | cites Software Engineering exam dates that are not in the retrieved data -- a genuine agent bug |
+| `rag-round-robin-detail` | `faithfulness` 0.00: attributes content to specific question numbers absent from the chunks |
+| `interview-two-pointers` | the presentation agent asks for a "preferred date and time" instead of returning the session link |
+| `no-such-subject` / `rag-out-of-scope-but-related` | correct refusals penalised by `helpfulness` / `context_relevance`; the metric, not the answer, is wrong here |
+
+The last row is the same class of problem `expect_refusal` already solves for the
+RAG triad and has not yet been extended to the agent metrics.
+
+### Unit tests
+
+```bash
+npm test                                    # or:
+python -m unittest discover -s tests -t . -v
+```
+
+18 tests, ~0.4s, **no credentials and no network**. They cover the parts where a
+mistake is silent rather than loud:
+
+| File | Guards |
+|---|---|
+| `tests/test_explorer_parallelism.py` | that the three explorers fan out instead of chaining, and that the state reducer collecting their concurrent writes still honours the per-turn reset |
+| `tests/test_evidence_budget.py` | that tool output reaching the fabrication judge is not silently clipped mid-record |
+
+The topology tests exist because concurrency here is a property of the graph's
+**edges**, not of any function body. Re-chaining the explorers sequentially
+still produces correct answers -- just three times slower -- so no output would
+look wrong and no other check would notice. Re-chaining them fails three tests.
+
+CI runs this step *before* the credential gate, so a broken graph fails in under
+a second instead of after a suite that spends Azure quota.
+
+### Performance benchmark
+
+```bash
+npm run bench                               # 4 cases x 3 reps, prints a table
+npm run bench:save                          # writes bench.json
+python -m evaluation.benchmark --compare bench-before.json bench-after.json
+```
+
+Separate from `evaluation.runner` because the question is different: the runner
+asks whether an answer is *right*, the benchmark asks what it *cost*. It reports
+wall-clock latency, token spend and LLM round-trips per response, and records
+which path the complexity analyser actually chose rather than assuming.
+
+Two cases exercise the complex path (the explorer stage runs) and two the simple
+path as a **control group** -- a change aimed at one path has to leave the other
+alone, and the control is what shows that it did.
+
+Measured on the fan-out change described in *Design notes* (medians, 3 reps):
+
+| Path | Before | After | Delta | Tokens |
+|---|---|---|---|---|
+| complex | 41.56 s | 31.43 s | **-24.4%** | -0.3% |
+| simple (control) | 16.90 s | 16.19 s | -4.2% (noise) | +0.2% |
+
+Identical LLM round-trip counts (8 and 10) and flat token spend either side:
+the win is wall-clock only, which is the expected signature of parallelising
+independent calls. Report medians, not means -- one baseline run hit 118 s
+against an unloaded 38 s, and a mean carries that outlier while a median does
+not.
+
 ### Automated triggers
 
 `.github/workflows/evaluate.yml` runs the suites on four triggers:
 
 | Trigger | When | Why |
 |---|---|---|
-| `push` to `main` | changes under `chatbot/`, `interview/`, `assignment_solver.py`, `evaluation/`, `observability/` | catch a regression at the commit that caused it |
+| `push` to `main` | changes under `chatbot/`, `interview/`, `assignment_solver.py`, `evaluation/`, `observability/`, `tests/` | catch a regression at the commit that caused it |
 | `pull_request` | same paths | review sees the scores before merge |
 | `schedule` | 04:00 UTC Mondays | scores drift when the model or the upstream portal changes, not only when this repo does |
 | `workflow_dispatch` | manual, with a suite picker | rerun one suite on demand |
@@ -419,8 +524,9 @@ in seconds instead of the whole suite.
 The workflow needs the Azure, Atlas and LangSmith values as **repository secrets**
 (Settings → Secrets and variables → Actions), because both suites make real API
 calls. It traces into a separate `ScholarSync-CI` project so CI runs do not mix
-with local ones, prints `azure_env.py --live` first so a credential problem is
-obvious rather than looking like a quality regression, and uploads
+with local ones, runs the credential-free unit tests first so a
+broken graph costs no quota, prints `azure_env.py --live --strict` next so a
+credential problem is obvious rather than looking like a quality regression, and uploads
 `eval-report.json` as an artifact even on failure — the report is what explains
 the failure. The runner exits non-zero below the threshold, so the job fails on
 its own.

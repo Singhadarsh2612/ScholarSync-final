@@ -18,6 +18,36 @@ from . import agent_metrics, datasets, rag_metrics
 
 PASS_THRESHOLD = 0.7
 
+# Per-tool evidence budget for the fabrication judge. The first version clipped
+# at 4000, which cut get_exams_raw (~7.3 KB) mid-record and severed the link
+# between a subject, its exam type and its date -- the judge then read a real
+# date as invented. Being generous is cheap: the judge's context is far larger
+# than the whole payload.
+EVIDENCE_CHARS_PER_TOOL = 20000
+EVIDENCE_CHARS_TOTAL = 60000
+
+
+def _evidence(results):
+    """Assemble the tool output that no_fabrication scores against.
+
+    Any clip is marked inline, because a judge that cannot distinguish
+    truncation from absence will call a real value a fabrication.
+    """
+    parts = []
+    budget = EVIDENCE_CHARS_TOTAL
+    for r in results:
+        body = r.get("result_str") or str(r.get("result", ""))
+        allowed = min(EVIDENCE_CHARS_PER_TOOL, budget)
+        if len(body) > allowed:
+            dropped = len(body) - allowed
+            body = f"{body[:allowed]}\n...[TRUNCATED HERE -- {dropped} more " \
+                   "chars of this tool's output were not shown]"
+        budget -= min(len(body), allowed)
+        parts.append(f"[{r['tool']}]\n{body}")
+        if budget <= 0:
+            break
+    return "\n\n".join(parts) or None
+
 
 async def _run_agent_case(case):
     from langchain_core.messages import HumanMessage
@@ -41,10 +71,7 @@ async def _run_agent_case(case):
 
     # What the agent actually had in hand. no_fabrication is judged against
     # this, not against the answer alone.
-    evidence = "\n\n".join(
-        f"[{r['tool']}]\n{(r.get('result_str') or str(r.get('result', '')))[:4000]}"
-        for r in results
-    ) or None
+    evidence = _evidence(results)
 
     metrics = await agent_metrics.evaluate(
         case["question"], answer,

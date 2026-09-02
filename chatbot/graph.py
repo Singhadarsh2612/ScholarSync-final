@@ -9,9 +9,13 @@ SIMPLE PATH:
 
 COMPLEX PATH:
   START → ComplexityAnalyzer → Planner(GPT-4o)
-        → ToolHeavyExplorer → MinimalExplorer → BalancedExplorer
-        → FitnessEvaluator → ExecutorNode
+        → ToolHeavyExplorer ┐
+          MinimalExplorer   ├→ FitnessEvaluator → ExecutorNode
+          BalancedExplorer  ┘
         → ExploiterNode → PresentationAgent → Critic → END
+
+The three explorers run concurrently in one superstep; FitnessEvaluator waits
+for all three.
 
 Critic RETRY routes back to ExploiterNode (tools NOT re-run).
 """
@@ -39,6 +43,21 @@ from chatbot.swarm_agents import (
 
 
 
+def merge_explorer_outputs(existing: list, incoming: list) -> list:
+    """Reducer for the parallel explorer fan-out.
+
+    The three explorers write this key in the same superstep, so it needs a
+    reducer rather than last-write-wins. It cannot be plain `operator.add`:
+    ComplexityAnalyzer clears the key with `[]` at the start of every turn, and
+    under a concatenating reducer that reset becomes a no-op, leaking each
+    turn's plans into the next one for the life of the thread. An empty write
+    therefore resets.
+    """
+    if not incoming:
+        return []
+    return (existing or []) + list(incoming)
+
+
 class MultiAgentState(TypedDict):
     messages:           Annotated[list[BaseMessage], operator.add]
 
@@ -57,7 +76,8 @@ class MultiAgentState(TypedDict):
     pending_email:          dict      # {to, subject, body} — set when draft shown; cleared after send
     pending_interview_topic: str      # set when interview card shown; cleared after open
 
-    explorer_outputs:   list      # 3 explorer dicts [{plan: [...], explorer: name}]
+    # 3 explorer dicts [{plan: [...], explorer: name}], written concurrently.
+    explorer_outputs:   Annotated[list, merge_explorer_outputs]
 
     execution_results:  list      # [{tool, skipped, result, result_str, use_output_as}]
 
@@ -117,10 +137,17 @@ builder.add_conditional_edges(
 
 builder.add_edge("SimpleRetriever", "ExecutorNode")
 
-builder.add_edge("Planner",            "ToolHeavyExplorer")
-builder.add_edge("ToolHeavyExplorer",  "MinimalExplorer")
-builder.add_edge("MinimalExplorer",    "BalancedExplorer")
-builder.add_edge("BalancedExplorer",   "FitnessEvaluator")
+# The explorers are independent: each reads the same planner_steps and emits
+# its own candidate plan, none reads another's output. Fanning them out runs
+# all three in one superstep, so the stage costs one explorer's latency
+# instead of the sum of three. FitnessEvaluator fans back in and waits for
+# all of them. Token cost is unchanged -- this buys wall-clock only.
+EXPLORERS = ("ToolHeavyExplorer", "MinimalExplorer", "BalancedExplorer")
+
+for _explorer in EXPLORERS:
+    builder.add_edge("Planner", _explorer)
+    builder.add_edge(_explorer, "FitnessEvaluator")
+
 builder.add_edge("FitnessEvaluator",   "ExecutorNode")
 
 builder.add_edge("ExecutorNode",       "ExploiterNode")

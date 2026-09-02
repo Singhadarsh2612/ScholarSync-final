@@ -362,22 +362,22 @@ async def _run_explorer(state: dict, system_prompt: str, name: str) -> dict:
     return {"plan": clean, "explorer": name}
 
 
+# The three run concurrently, so each returns only its own result and the
+# merge_explorer_outputs reducer in graph.py collects them. Reading the key
+# and appending here would race: all three see the same pre-fan-out value.
 async def run_tool_heavy_explorer(state: dict) -> dict:
-    out      = await _run_explorer(state, EXPLORER_TOOL_HEAVY_SYSTEM, "ToolHeavy")
-    existing = list(state.get("explorer_outputs", []))
-    return {"explorer_outputs": existing + [out]}
+    out = await _run_explorer(state, EXPLORER_TOOL_HEAVY_SYSTEM, "ToolHeavy")
+    return {"explorer_outputs": [out]}
 
 
 async def run_minimal_explorer(state: dict) -> dict:
-    out      = await _run_explorer(state, EXPLORER_MINIMAL_SYSTEM, "Minimal")
-    existing = list(state.get("explorer_outputs", []))
-    return {"explorer_outputs": existing + [out]}
+    out = await _run_explorer(state, EXPLORER_MINIMAL_SYSTEM, "Minimal")
+    return {"explorer_outputs": [out]}
 
 
 async def run_balanced_explorer(state: dict) -> dict:
-    out      = await _run_explorer(state, EXPLORER_BALANCED_SYSTEM, "Balanced")
-    existing = list(state.get("explorer_outputs", []))
-    return {"explorer_outputs": existing + [out]}
+    out = await _run_explorer(state, EXPLORER_BALANCED_SYSTEM, "Balanced")
+    return {"explorer_outputs": [out]}
 
 
 

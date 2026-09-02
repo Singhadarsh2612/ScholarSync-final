@@ -48,7 +48,10 @@ async def no_fabrication(question, answer, evidence=None):
         "present in the retrieved data are NOT fabrication, however specific. "
         "Reformatting, summarising, and converting date formats are fine. "
         "Inventing a record that is not in the data scores 0.0; an answer fully "
-        "grounded in it scores 1.0.",
+        "grounded in it scores 1.0. "
+        "If the data is marked TRUNCATED, treat the unshown part as unknown, "
+        "not as empty: do not call a value fabricated merely because it is "
+        "missing from what you were shown.",
         {"Question": question, "Retrieved data": evidence, "Answer": answer},
     )
 

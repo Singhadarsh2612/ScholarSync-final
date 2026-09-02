@@ -15,53 +15,6 @@
 
 services:
 
-  # ── Databases ──────────────────────────────────────────────────────────────
-
-  postgres:
-    image: postgres:16-alpine
-    environment:
-      POSTGRES_USER: scholarsync
-      POSTGRES_PASSWORD: scholarsync
-      POSTGRES_DB: scholarsync
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U scholarsync -d scholarsync"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
-
-  # Optional local MongoDB, for working offline. It is behind a profile, so a
-  # plain `docker compose up` does NOT start it -- MONGO_URI in .env points at
-  # Atlas. To use this one instead:
-  #     set MONGO_URI=mongodb://mongo:27017 and
-  #         CHAT_MONGO_URI=mongodb://mongo:27017/scholarsync_chat in .env
-  #     docker compose --profile local-db up
-  # The mongo_data volume is retained either way, so nothing is lost by
-  # switching back and forth.
-  mongo:
-    image: mongo:7
-    profiles: ["local-db"]
-    # --quiet drops the per-connection accept/close chatter. Without it the
-    # healthcheck below logs a burst of NETWORK/ACCESS lines on every probe,
-    # which buries the output of every other service in `docker compose up`.
-    command: ["mongod", "--quiet"]
-    volumes:
-      - mongo_data:/data/db
-    ports:
-      - "27017:27017"
-    healthcheck:
-      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
-      # start_interval polls fast only until the first pass, so `interval` can
-      # stay long without delaying startup for the services that depend on us.
-      interval: 30s
-      start_period: 30s
-      start_interval: 2s
-      timeout: 5s
-      retries: 5
-
   # ── Python services (one image, two commands) ──────────────────────────────
 
   mcp:
@@ -74,9 +27,9 @@ services:
       # container "localhost" is this container -- not chat-api.
       CHAT_API_URL: http://chat-api:5000
       PUBLIC_BASE_URL: http://localhost:8000
-      # MONGO_URI intentionally NOT overridden: it comes from .env so the same
-      # value works locally and in Compose. Point .env at a local container
-      # with mongodb://mongo:27017 if you want the bundled mongo service.
+      # MONGO_URI and DATABASE_URL intentionally NOT overridden: both are
+      # managed instances (Atlas / Neon) reached the same way from .env
+      # whether running locally or in Compose.
     volumes:
       # The Google service-account key is excluded from the build context by
       # .dockerignore so it is never baked into an image. Mount it read-only
@@ -94,22 +47,15 @@ services:
     env_file: .env
     environment:
       # Container hostnames, overriding the localhost defaults in .env.
-      DATABASE_URL: postgresql://scholarsync:scholarsync@postgres:5432/scholarsync
       MCP_URL: http://mcp:8002
-      # MONGO_URI comes from .env (see the note on the mcp service).
-      # DATABASE_URL is still overridden because Postgres is a local container;
-      # point it at a managed instance in .env and delete the line above.
+      # MONGO_URI and DATABASE_URL come from .env: both are managed instances
+      # (Atlas / Neon), so no container-hostname override is needed here.
       CHAT_API_URL: http://chat-api:5000
       PUBLIC_BASE_URL: http://localhost:8000
       INTERVIEW_UI_URL: http://localhost:3001
     ports:
       - "8000:8000"
     depends_on:
-      # No mongo entry: it is profile-gated and usually not running. The
-      # interview service degrades gracefully when Mongo is unreachable
-      # (mongo_services.get_db returns None), so nothing needs to gate on it.
-      postgres:
-        condition: service_healthy
       mcp:
         condition: service_started
     restart: unless-stopped
@@ -121,8 +67,8 @@ services:
     environment:
       PORT: 5000
       # Mongoose reads the database name from the URI path, so this needs its
-      # own value rather than MONGO_URI + DB_NAME.
-      MONGO_URI: ${CHAT_MONGO_URI:-mongodb://mongo:27017/scholarsync_chat}
+      # own value rather than MONGO_URI + DB_NAME. Set in .env (Atlas).
+      MONGO_URI: ${CHAT_MONGO_URI:?CHAT_MONGO_URI must be set in .env}
       # Refuses to boot if unset. Generate with: openssl rand -hex 32
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET must be set in .env}
       CLIENT_URL: http://localhost:3000
@@ -162,7 +108,3 @@ services:
     depends_on:
       - hub
     restart: unless-stopped
-
-volumes:
-  postgres_data:
-  mongo_data:

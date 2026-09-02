@@ -13,6 +13,7 @@ on:
       - "assignment_solver.py"
       - "evaluation/**"
       - "observability/**"
+      - "tests/**"
       - "azure_env.py"
       - "endpoints.py"
   pull_request:
@@ -21,6 +22,8 @@ on:
       - "interview/**"
       - "assignment_solver.py"
       - "evaluation/**"
+      - "observability/**"
+      - "tests/**"
   schedule:
     # 04:00 UTC Mondays. Scores move when the deployment or the portal data
     # changes, not only when this repo does.
@@ -81,6 +84,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+
+      - name: Unit tests
+        # No credentials and no network: graph topology, the explorer reducer
+        # and the evidence budget. Runs before the credential gate so a broken
+        # graph fails in under a second instead of after a paid suite.
+        run: python -m unittest discover -s tests -t . -v
 
       - name: Check credentials
         # --strict exits 1 with the missing capabilities named, so a run with
