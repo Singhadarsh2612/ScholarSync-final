@@ -1,10 +1,14 @@
 # pyrefly: ignore [missing-import]
+import datetime
+
 from ..calendar_auth import get_calendar_service, CALENDAR_ID
 
 
 def list_calendar_events(data):
 
-    date = data["date"]
+    # "list my calendar events" with no day mentioned reaches here as "" —
+    # default to today instead of sending Google an invalid RFC3339 timestamp.
+    date = data.get("date") or datetime.date.today().isoformat()
 
     print("[MCP] list_calendar_events ->", date)
 

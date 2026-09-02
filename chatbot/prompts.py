@@ -51,7 +51,9 @@ UI REQUIREMENT MAPPING (backend renders these — never generate ui_* blocks you
   get_assignments_raw           → ui_requirement: {"required": true,  "type": "assignments"}
   get_materials_raw             → ui_requirement: {"required": true,  "type": "materials"}
   prepare_interview_session_raw → ui_requirement: {"required": true,  "type": "interview_confirm"}
-  get_marks_raw                 → ui_requirement: {"required": false, "type": "none"}
+  get_marks_raw                 → ui_requirement: {"required": true,  "type": "marks"}
+  get_exams_raw                 → ui_requirement: {"required": true,  "type": "exams"}
+  get_deadlines_raw             → ui_requirement: {"required": true,  "type": "deadlines"}
   All other tools               → ui_requirement: {"required": false, "type": "none"}
 If multiple data tools are used, use the FIRST one's UI type.
 """
