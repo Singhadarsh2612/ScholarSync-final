@@ -110,7 +110,7 @@ jobs:
             rag)   FLAGS="--rag" ;;
             *)     FLAGS="" ;;
           esac
-          python -m evaluation.runner $FLAGS --json eval-report.json
+          python -m evaluation.runner $FLAGS --json reports/eval-report.json
 
       - name: Upload report
         # Runs even on failure: the report is what explains the failure.
@@ -118,4 +118,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: eval-report
-          path: eval-report.json
+          path: reports/eval-report.json

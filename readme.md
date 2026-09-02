@@ -403,7 +403,7 @@ Against the running stack (recommended — same code the containers serve):
 npm run eval            # both suites
 npm run eval:agent      # agent responses
 npm run eval:rag        # RAG triad
-npm run eval:report     # writes eval-report.json
+npm run eval:report     # writes reports/eval-report.json
 npm run obs:status      # is tracing configured and reachable?
 ```
 
@@ -414,7 +414,7 @@ python -m evaluation.runner                          # both suites
 python -m evaluation.runner --agent                   # agent responses
 python -m evaluation.runner --rag                     # RAG triad
 python -m evaluation.runner --case rag-absent-topic    # one case, repeatable
-python -m evaluation.runner --json report.json         # machine-readable
+python -m evaluation.runner --json reports/eval-report.json   # machine-readable
 ```
 
 `--case` is the one to reach for while fixing something: it reruns a single case
@@ -484,8 +484,8 @@ a second instead of after a suite that spends Azure quota.
 
 ```bash
 npm run bench                               # 4 cases x 3 reps, prints a table
-npm run bench:save                          # writes bench.json
-python -m evaluation.benchmark --compare bench-before.json bench-after.json
+npm run bench:save                          # writes reports/bench.json
+python -m evaluation.benchmark --compare reports/bench-before.json reports/bench-after.json
 ```
 
 Separate from `evaluation.runner` because the question is different: the runner
@@ -527,7 +527,7 @@ calls. It traces into a separate `ScholarSync-CI` project so CI runs do not mix
 with local ones, runs the credential-free unit tests first so a
 broken graph costs no quota, prints `azure_env.py --live --strict` next so a
 credential problem is obvious rather than looking like a quality regression, and uploads
-`eval-report.json` as an artifact even on failure — the report is what explains
+`reports/eval-report.json` as an artifact even on failure — the report is what explains
 the failure. The runner exits non-zero below the threshold, so the job fails on
 its own.
 

@@ -4,7 +4,7 @@
     python -m evaluation.runner --agent      # agent responses only
     python -m evaluation.runner --rag        # RAG triad only
     python -m evaluation.runner --case rag-absent-topic
-    python -m evaluation.runner --json out.json
+    python -m evaluation.runner --json reports/eval-report.json
 
 Runs in-process so tool calls are visible in the graph state; scores are
 therefore for the code in this container, not a remote deployment.
@@ -12,9 +12,9 @@ therefore for the code in this container, not a remote deployment.
 
 import argparse
 import asyncio
-import json
 
 from . import agent_metrics, datasets, rag_metrics
+from . import report as report_io
 
 PASS_THRESHOLD = 0.7
 
@@ -193,9 +193,7 @@ async def main_async(args):
             _summarise("rag", report["rag"])
 
     if args.json:
-        with open(args.json, "w", encoding="utf-8") as fh:
-            json.dump(report, fh, indent=2)
-        print(f"\n  wrote {args.json}")
+        print(f"\n  wrote {report_io.write(args.json, report)}")
 
     all_results = report["agent"] + report["rag"]
     bad = [r for r in all_results

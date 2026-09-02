@@ -1,8 +1,8 @@
 """Latency and token benchmark for the agent graph.
 
-    python -m evaluation.benchmark --json bench-before.json
+    python -m evaluation.benchmark --json reports/bench-before.json
     python -m evaluation.benchmark --reps 5 --case multi-tool-priority
-    python -m evaluation.benchmark --compare bench-before.json bench-after.json
+    python -m evaluation.benchmark --compare reports/bench-before.json reports/bench-after.json
 
 Separate from runner.py because the question is different: the runner asks
 whether an answer is right, this asks what it cost. Both graph paths are
@@ -15,6 +15,8 @@ import asyncio
 import json
 import statistics
 import time
+
+from . import report as report_io
 
 # Two complex cases (multi-step, so the explorer stage runs) and two simple
 # ones (single tool, bypassing the explorers) as a control group.
@@ -226,9 +228,7 @@ async def main_async(args):
                   f"  tokens mean={agg['total_tokens']['mean']:.0f}")
 
     if args.json:
-        with open(args.json, "w", encoding="utf-8") as fh:
-            json.dump(report, fh, indent=2)
-        print(f"\n  wrote {args.json}")
+        print(f"\n  wrote {report_io.write(args.json, report)}")
     return 0
 
 

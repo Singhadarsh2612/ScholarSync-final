@@ -13,14 +13,14 @@
     "eval": "docker compose exec -T hub python -m evaluation.runner",
     "eval:agent": "docker compose exec -T hub python -m evaluation.runner --agent",
     "eval:rag": "docker compose exec -T hub python -m evaluation.runner --rag",
-    "eval:report": "docker compose exec -T hub python -m evaluation.runner --json eval-report.json",
+    "eval:report": "docker compose exec -T hub python -m evaluation.runner --json reports/eval-report.json",
     "eval:local": "python -m evaluation.runner",
     "obs:status:local": "python -m observability.status",
-    "eval:pull-report": "docker compose cp hub:/app/eval-report.json ./eval-report.json",
+    "eval:pull-report": "docker compose cp hub:/app/reports/eval-report.json ./reports/eval-report.json",
     "test": "python -m unittest discover -s tests -t . -v",
     "bench": "python -m evaluation.benchmark --reps 3",
-    "bench:save": "python -m evaluation.benchmark --reps 3 --json bench.json",
-    "bench:compare": "python -m evaluation.benchmark --compare bench-before.json bench-after.json"
+    "bench:save": "python -m evaluation.benchmark --reps 3 --json reports/bench.json",
+    "bench:compare": "python -m evaluation.benchmark --compare reports/bench-before.json reports/bench-after.json"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
