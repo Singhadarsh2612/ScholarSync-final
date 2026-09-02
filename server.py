@@ -36,9 +36,14 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
+# In production, set CORS_ALLOWED_ORIGINS to a comma-separated list of the
+# real frontend origins (chat-ui, interview-ui). Wildcard is only safe here
+# because it's the local-dev default, not because "*" + credentials is
+# actually meaningful per the CORS spec.
+_cors_origins = os.getenv("CORS_ALLOWED_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -48,8 +53,16 @@ app.add_middleware(
 # Serves /interview/api/*. Previously a separate FastAPI app that the hub
 # reached over HTTP; it is now called in-process.
 from interview.main import router as interview_router
+from endpoints import INTERVIEW_UI_URL
 
 app.include_router(interview_router, prefix="/interview", tags=["interview"])
+
+
+@app.get("/config")
+def public_config():
+    """Runtime config for static pages (web/) that need cross-origin links
+    built from the deployment's actual URLs instead of a hardcoded literal."""
+    return {"interview_ui_url": INTERVIEW_UI_URL}
 
 class ChatRequest(BaseModel):
     message: str

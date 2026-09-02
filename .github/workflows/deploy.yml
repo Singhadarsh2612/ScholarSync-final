@@ -1,0 +1,110 @@
+name: Deploy
+
+# Builds the 4 images (hub image is shared by the hub and mcp Container Apps),
+# pushes them to ACR tagged with the commit SHA, then updates the 5 existing
+# Container Apps to that tag. Never touches app URLs or secrets — those are
+# set once at `az containerapp create` time (see the deployment plan) and
+# stay fixed across every run of this workflow.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "Dockerfile"
+      - "requirements.txt"
+      - "server.py"
+      - "endpoints.py"
+      - "chatbot/**"
+      - "interview/**"
+      - "web/**"
+      - "assignment_solver.py"
+      - "analysis_api.py"
+      - "azure_env.py"
+      - "expert-chat/**"
+      - "expert-chat-ui/**"
+      - "interview-ui/**"
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write   # required for OIDC login to Azure
+  contents: read
+
+env:
+  RESOURCE_GROUP: rg-scholarsync
+  ACR_NAME: ${{ vars.ACR_NAME }}          # e.g. scholarsyncacr
+  ACR_LOGIN_SERVER: ${{ vars.ACR_NAME }}.azurecr.io
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Short SHA
+        id: sha
+        run: echo "value=${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+
+      # Federated OIDC login — no long-lived Azure secret stored in GitHub.
+      # Set up once: az identity federated-credential create ... (see plan).
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: ACR login
+        run: az acr login --name "$ACR_NAME"
+
+      # hub and mcp are the same image, different `command` on the Container
+      # App side, so only one build is needed here.
+      - name: Build & push hub/mcp image
+        run: |
+          docker build -t "$ACR_LOGIN_SERVER/scholarsync-hub:${{ steps.sha.outputs.value }}" -f Dockerfile .
+          docker push "$ACR_LOGIN_SERVER/scholarsync-hub:${{ steps.sha.outputs.value }}"
+
+      - name: Build & push chat-api image
+        run: |
+          docker build -t "$ACR_LOGIN_SERVER/scholarsync-chat-api:${{ steps.sha.outputs.value }}" ./expert-chat
+          docker push "$ACR_LOGIN_SERVER/scholarsync-chat-api:${{ steps.sha.outputs.value }}"
+
+      # CRA bakes REACT_APP_* in at build time, so these need the deployed
+      # apps' real, already-stable FQDNs as build args. The apps already
+      # exist (created once during initial setup) so this is just a read.
+      - name: Resolve public URLs
+        id: urls
+        run: |
+          echo "hub=https://$(az containerapp show -n ca-hub -g "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv)" >> "$GITHUB_OUTPUT"
+          echo "chat_api=https://$(az containerapp show -n ca-chat-api -g "$RESOURCE_GROUP" --query properties.configuration.ingress.fqdn -o tsv)" >> "$GITHUB_OUTPUT"
+
+      - name: Build & push chat-ui image
+        run: |
+          docker build -t "$ACR_LOGIN_SERVER/scholarsync-chat-ui:${{ steps.sha.outputs.value }}" \
+            --build-arg REACT_APP_API_URL="${{ steps.urls.outputs.chat_api }}" \
+            --build-arg REACT_APP_SOCKET_URL="${{ steps.urls.outputs.chat_api }}" \
+            ./expert-chat-ui
+          docker push "$ACR_LOGIN_SERVER/scholarsync-chat-ui:${{ steps.sha.outputs.value }}"
+
+      - name: Build & push interview-ui image
+        run: |
+          docker build -t "$ACR_LOGIN_SERVER/scholarsync-interview-ui:${{ steps.sha.outputs.value }}" \
+            --build-arg REACT_APP_API_URL="${{ steps.urls.outputs.hub }}/interview/api" \
+            ./interview-ui
+          docker push "$ACR_LOGIN_SERVER/scholarsync-interview-ui:${{ steps.sha.outputs.value }}"
+
+      # Each update creates a new revision on the same Container App — the
+      # public FQDN never changes. Roll back by re-running this step with a
+      # previous SHA tag (az containerapp update --image ...:<old-sha>).
+      - name: Deploy to Container Apps
+        run: |
+          az containerapp update -n ca-hub -g "$RESOURCE_GROUP" \
+            --image "$ACR_LOGIN_SERVER/scholarsync-hub:${{ steps.sha.outputs.value }}"
+          az containerapp update -n ca-mcp -g "$RESOURCE_GROUP" \
+            --image "$ACR_LOGIN_SERVER/scholarsync-hub:${{ steps.sha.outputs.value }}"
+          az containerapp update -n ca-chat-api -g "$RESOURCE_GROUP" \
+            --image "$ACR_LOGIN_SERVER/scholarsync-chat-api:${{ steps.sha.outputs.value }}"
+          az containerapp update -n ca-chat-ui -g "$RESOURCE_GROUP" \
+            --image "$ACR_LOGIN_SERVER/scholarsync-chat-ui:${{ steps.sha.outputs.value }}"
+          az containerapp update -n ca-interview-ui -g "$RESOURCE_GROUP" \
+            --image "$ACR_LOGIN_SERVER/scholarsync-interview-ui:${{ steps.sha.outputs.value }}"

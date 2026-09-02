@@ -3840,7 +3840,7 @@
               <div class="iframe-sub">Coach Agent · Mock Interview</div>
             </div>
           </div>
-          <iframe src="https://scholarsync-aps-client.azurewebsites.net/"
+          <iframe id="ai-interviewer-iframe"
             allow="camera; microphone; display-capture; autoplay"></iframe>
         </div>
         <div class="iframe-view" id="material-view">
@@ -3980,7 +3980,16 @@
     function openDeadlines(ph) { _openView("deadline-view", ph); }
     function openAnalysis(ph) { _openView("analysis-view", ph); }
     function openAssignmentSolver(ph) { _openView("assignment-view", ph); }
-    function openAIInterviewer(ph) { _openView("ai-interviewer-view", ph); }
+    function openAIInterviewer(ph) {
+      var frame = document.getElementById("ai-interviewer-iframe");
+      if (frame && !frame.src) {
+        fetch("/config")
+          .then(function (r) { return r.json(); })
+          .then(function (cfg) { frame.src = cfg.interview_ui_url; })
+          .catch(function () { frame.src = "http://localhost:3001"; });
+      }
+      _openView("ai-interviewer-view", ph);
+    }
     function openMaterials(ph) { _openView("material-view", ph); }
 
     function closeViews(pushHistory) {
